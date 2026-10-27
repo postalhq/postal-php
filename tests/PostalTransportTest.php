@@ -7,6 +7,7 @@ namespace Postal\Tests;
 use PHPUnit\Framework\TestCase;
 use Postal\Client;
 use Postal\Laravel\PostalTransport;
+use Postal\OtpToken;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\Header\MetadataHeader;
@@ -63,6 +64,19 @@ final class PostalTransportTest extends TestCase
         $this->assertSame('Oi', $body['text']);
         $this->assertSame(['X-Pedido' => '10482', 'List-Unsubscribe' => '<https://exemplo.com/sair>'], $body['headers']);
         $this->assertArrayNotHasKey('attachments', $body);
+    }
+
+    public function test_the_otp_token_header_goes_to_the_api_unchanged(): void
+    {
+        $value = OtpToken::header(str_repeat('Ab3 ', 25).'x', 'https://painel.exemplo.com:8443');
+        $http = FakeTransport::replying(['id' => 'em_1']);
+        $email = (new Email)->from('voce@seudominio.com.br')->to('fulano@exemplo.com')->subject('Seu código ✅')->text('Código: 123456');
+        $email->getHeaders()->addTextHeader('OTP-Token', $value);
+
+        $this->mailer($http)->send($email);
+
+        $this->assertSame(['OTP-Token' => $value], $http->requests[0]['json']['headers']);
+        $this->assertStringNotContainsString('=?', (string) $http->requests[0]['body']);
     }
 
     public function test_records_the_postal_email_id_on_the_message(): void
