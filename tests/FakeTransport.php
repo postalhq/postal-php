@@ -13,12 +13,12 @@ use Postal\Http\Transport;
 final class FakeTransport implements Transport
 {
     /**
-     * @var list<array{method: string, url: string, path: string, headers: array<string, string>, body: string|null, json: mixed}>
+     * @var list<array{method: string, url: string, path: string, headers: array<string, string>, body: string|null, json: mixed, timeout: float, connect_timeout: float}>
      */
     public array $requests = [];
 
     /**
-     * @param  Closure(array{method: string, url: string, path: string, headers: array<string, string>, body: string|null, json: mixed}, int): array{status?: int, body?: mixed, headers?: array<string, string>}  $handler
+     * @param  Closure(array{method: string, url: string, path: string, headers: array<string, string>, body: string|null, json: mixed, timeout: float, connect_timeout: float}, int): array{status?: int, body?: mixed, headers?: array<string, string>}  $handler
      */
     public function __construct(private readonly Closure $handler) {}
 
@@ -27,7 +27,7 @@ final class FakeTransport implements Transport
         return new self(fn (): array => ['status' => $status, 'body' => $body]);
     }
 
-    public function send(string $method, string $url, array $headers, ?string $body, float $timeout): array
+    public function send(string $method, string $url, array $headers, ?string $body, float $timeout, float $connectTimeout = 5.0): array
     {
         $request = [
             'method' => $method,
@@ -36,6 +36,8 @@ final class FakeTransport implements Transport
             'headers' => $headers,
             'body' => $body,
             'json' => $body === null ? null : json_decode($body, true),
+            'timeout' => $timeout,
+            'connect_timeout' => $connectTimeout,
         ];
         $this->requests[] = $request;
 

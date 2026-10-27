@@ -8,7 +8,8 @@ use Throwable;
 
 /**
  * Falha de rede ou tempo esgotado: a API não chegou a responder. O status é 0 e o nome é
- * `network_error` ou `timeout`.
+ * `network_error`, `timeout` (a API aceitou a conexão mas não respondeu a tempo)
+ * ou `connect_timeout` (não foi possível abrir a conexão a tempo).
  */
 class NetworkException extends PostalException
 {

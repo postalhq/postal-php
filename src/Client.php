@@ -68,17 +68,24 @@ final class Client
 
     private readonly float $timeout;
 
+    private readonly float $connectTimeout;
+
     private readonly int $retryDelayMs;
 
     private readonly Transport $transport;
 
     private readonly string $userAgent;
 
+    private ?RateLimit $rateLimit = null;
+
     /**
      * @param  string|null  $apiKey  Chave de API (`ps_...`). Sem chave, usa a variável de ambiente `POSTAL_API_KEY`.
-     * @param  array{base_url?: string, max_retries?: int, timeout?: float|int, retry_delay?: int, transport?: Transport, user_agent?: string}  $options
-     *                                                                                                                                                    Opções: `max_retries` são as tentativas extras em 429 e 5xx (padrão 2); `timeout`, os segundos por
-     *                                                                                                                                                    tentativa (padrão 30); `retry_delay`, a espera base em milissegundos, que dobra a cada tentativa (padrão 500).
+     * @param  array{base_url?: string, max_retries?: int, timeout?: float|int, connect_timeout?: float|int, retry_delay?: int, transport?: Transport, user_agent?: string}  $options
+     *                                                                                                                                                                                 Opções: `max_retries` são as tentativas extras em 429 e 5xx (padrão 2); `timeout`, os segundos por
+     *                                                                                                                                                                                 tentativa, do início ao fim (padrão 30); `connect_timeout`, os segundos só para abrir a conexão
+     *                                                                                                                                                                                 (padrão 5; 0 desliga); `retry_delay`, a espera base em milissegundos, que dobra a cada tentativa
+     *                                                                                                                                                                                 (padrão 500). Com a API fora do ar, o pior caso é cerca de
+     *                                                                                                                                                                                 `(max_retries + 1) × connect_timeout` mais as esperas entre tentativas.
      */
     public function __construct(?string $apiKey = null, array $options = [])
     {
@@ -92,6 +99,7 @@ final class Client
         $this->baseUrl = rtrim($options['base_url'] ?? (getenv('POSTAL_API_URL') ?: self::DEFAULT_BASE_URL), '/');
         $this->maxRetries = max(0, $options['max_retries'] ?? 2);
         $this->timeout = (float) ($options['timeout'] ?? 30);
+        $this->connectTimeout = max(0.0, (float) ($options['connect_timeout'] ?? 5));
         $this->retryDelayMs = max(0, $options['retry_delay'] ?? 500);
         $this->transport = $options['transport'] ?? new CurlTransport;
         $this->userAgent = 'postal-so-php/'.self::VERSION.(isset($options['user_agent']) ? ' '.$options['user_agent'] : '');
@@ -103,6 +111,18 @@ final class Client
         $this->topics = new Topics($this);
         $this->domains = new Domains($this);
         $this->webhooks = new Webhooks($this);
+    }
+
+    /**
+     * O limite de requisições dos cabeçalhos da última resposta (`X-RateLimit-Limit`, `X-RateLimit-Remaining` e,
+     * na 429, `Retry-After` e `X-RateLimit-Reset`), inclusive de respostas de erro.
+     *
+     * Funciona com chave só de envio e não faz requisição extra (diferente de {@see usage()}). Devolve `null`
+     * até chegar uma resposta com esses cabeçalhos; uma resposta sem eles mantém o último valor conhecido.
+     */
+    public function rateLimit(): ?RateLimit
+    {
+        return $this->rateLimit;
     }
 
     /**
@@ -182,7 +202,7 @@ final class Client
             $canRetry = $attempt < $this->maxRetries;
 
             try {
-                $response = $this->transport->send($method, $url, $headers, $payload, $this->timeout);
+                $response = $this->transport->send($method, $url, $headers, $payload, $this->timeout, $this->connectTimeout);
             } catch (NetworkException $exception) {
                 if ($canRetry && $retriesServerErrors) {
                     $this->sleep($this->delay($attempt));
@@ -192,6 +212,8 @@ final class Client
 
                 throw $exception;
             }
+
+            $this->rateLimit = RateLimit::fromHeaders($response['headers']) ?? $this->rateLimit;
 
             if ($response['status'] >= 200 && $response['status'] < 300) {
                 return $response;
@@ -227,6 +249,7 @@ final class Client
             is_string($body['message'] ?? null) ? $body['message'] : 'Erro '.$response['status'].' do Postal.',
             $retryAfter,
             $body,
+            RateLimit::fromHeaders($response['headers']),
         );
     }
 

@@ -44,10 +44,41 @@ Os campos têm os mesmos nomes da API (`reply_to`, `scheduled_at`, `external_id`
 $postal = new Client('ps_xxx', [
     'base_url' => 'https://api.postal.so', // padrão
     'max_retries' => 2,                    // tentativas extras em 429 e 5xx; 0 desliga
-    'timeout' => 30,                       // segundos por tentativa
+    'timeout' => 30,                       // segundos por tentativa, do início ao fim
+    'connect_timeout' => 5,                // segundos só para abrir a conexão; 0 desliga
     'retry_delay' => 500,                  // espera base em ms, dobra a cada tentativa
 ]);
 ```
+
+### Tempos limite e retentativas
+
+| Opção | Padrão | O que limita |
+| --- | --- | --- |
+| `timeout` | 30 s | Cada tentativa inteira: conexão, envio do corpo e leitura da resposta. Mantenha alto se você envia anexos grandes (até 40 MB). |
+| `connect_timeout` | 5 s | Só a abertura da conexão (DNS, TCP e TLS), via `CURLOPT_CONNECTTIMEOUT_MS`. Se estourar, vira `NetworkException` com o nome `connect_timeout`. `0` desliga. |
+| `max_retries` | 2 | Tentativas extras (3 no total). `0` desliga. |
+
+O pior caso de bloqueio de uma chamada é:
+
+```
+(max_retries + 1) × tempo de cada tentativa + esperas entre tentativas
+```
+
+A espera começa em 500 ms e dobra a cada tentativa, com até 25% a mais (com os padrões, no máximo cerca de 1,9 s no total). Num 429, a espera é o `Retry-After` (até 30 s por tentativa). Com os padrões:
+
+- **API inalcançável** (a conexão não abre): `3 × 5 s + ~1,9 s`, cerca de **17 s**.
+- **API aceita a conexão mas não responde**: `3 × 30 s + ~1,9 s`, cerca de **92 s**.
+
+Recomendações:
+
+- **Requisição web síncrona** (alguém esperando a página): `timeout` 10 e `max_retries` 1. Com a API inalcançável isso bloqueia cerca de 11 s (`2 × 5 s + ~0,6 s`; use `connect_timeout` 3 para ~7 s) e no máximo cerca de 21 s se ela travar depois de conectar. Se a requisição envia anexos grandes, mantenha o `timeout` mais alto ou envie por uma fila.
+- **Job em fila** (ninguém esperando): fique com os padrões. Ou melhor, deixe a própria fila repetir o job.
+
+```php
+$postal = new Client(getenv('POSTAL_API_KEY'), ['timeout' => 10, 'max_retries' => 1]);
+```
+
+No Laravel, as mesmas opções ficam em `config/postal.php` e nas variáveis `POSTAL_TIMEOUT`, `POSTAL_CONNECT_TIMEOUT` e `POSTAL_MAX_RETRIES`.
 
 ## E-mails
 
@@ -92,7 +123,7 @@ Para repetir um envio sem mandar o e-mail duas vezes, passe uma chave que identi
 $postal->emails->send($params, 'pedido-10482-enviado');
 ```
 
-Sem chave, o SDK gera uma para cada chamada de `emails->send`, `emails->batch` e `events->send` e a reaproveita nas retentativas, então um timeout ou um 5xx não duplica o envio. Veja [Idempotência](https://postal.so/docs/idempotencia).
+Sem chave, o SDK gera uma (um UUID) para cada chamada de `emails->send`, `emails->batch` e `events->send` e a reaproveita nas retentativas, então um timeout, uma falha de conexão ou um 5xx não duplica o envio. Já os outros `POST` e `PATCH` (como `contacts->create`, `segments->create` e `emails->cancel`) não levam chave: o SDK só os repete em 429 (a API recusou antes de processar), nunca após um 5xx ou uma falha de rede, porque repetir poderia duplicar o efeito. `contacts->upsert` e `contacts->batch` são seguros de repetir e por isso são repetidos. Veja [Idempotência](https://postal.so/docs/idempotencia).
 
 ## Contatos
 
@@ -210,13 +241,31 @@ try {
 }
 ```
 
-Falhas de rede e tempo esgotado viram `NetworkException` (status 0; nome `network_error` ou `timeout`), que também é uma `PostalException`. Os códigos estão em <https://postal.so/docs/erros>.
+Falhas de rede e tempo esgotado viram `NetworkException` (status 0; nome `network_error`, `timeout` ou `connect_timeout`), que também é uma `PostalException`. Os códigos estão em <https://postal.so/docs/erros>.
 
 ### Retentativas
 
 - `429 rate_limit_exceeded` é repetido sempre, esperando o `Retry-After`. Cota esgotada (`daily_quota_exceeded`, `monthly_quota_exceeded`) não é repetida.
 - `5xx`, `409 concurrent_idempotent_requests` e falhas de rede são repetidos em `GET`, `DELETE`, nos envios com chave de idempotência (a automática inclusa) e em `contacts->upsert`. Num `POST` sem chave, como `contacts->create`, não: repetir poderia duplicar o efeito.
 - A espera começa em 500 ms e dobra a cada tentativa (máximo de 30 s).
+- Uma falha ou tempo esgotado de conexão (`connect_timeout`) conta como falha de rede e segue a mesma regra.
+
+### Limite de requisições
+
+`$postal->rateLimit()` devolve o limite de requisições por segundo lido dos cabeçalhos da última resposta (`X-RateLimit-Limit`, `X-RateLimit-Remaining` e, na 429, `Retry-After` e `X-RateLimit-Reset`). Diferente de `$postal->usage()`, funciona com chave **só de envio** e não faz requisição extra.
+
+```php
+$postal->emails->send($params);
+
+$rateLimit = $postal->rateLimit(); // null até chegar uma resposta com os cabeçalhos
+// Postal\RateLimit { limit: 10, remaining: 9, retryAfter: null, resetAt: null }
+
+if ($rateLimit !== null && $rateLimit->remaining === 0) {
+    // desacelere o envio em lote
+}
+```
+
+As propriedades (`readonly`) são `limit` e `remaining` (requisições por segundo), e `retryAfter` (segundos) e `resetAt` (timestamp Unix) que só vêm na 429. O que não veio é `null`. Respostas de erro também contam: a `PostalException` de uma 429 traz o mesmo objeto em `$e->rateLimit`. Uma resposta sem os cabeçalhos mantém o último valor conhecido.
 
 ## Laravel
 
@@ -267,7 +316,7 @@ composer install
 vendor/bin/phpunit
 ```
 
-Os testes usam um transporte HTTP falso e, para o `CurlTransport`, um servidor local (`php -S`). Para trocar o transporte HTTP no seu código, passe uma classe que implemente `Postal\Http\Transport` na opção `transport`.
+Os testes usam um transporte HTTP falso e, para o `CurlTransport`, um servidor local (`php -S`). Para trocar o transporte HTTP no seu código, passe uma classe que implemente `Postal\Http\Transport` na opção `transport` (o método `send` recebe o `timeout` e o `connect_timeout`, nessa ordem, depois do corpo).
 
 ## Licença
 

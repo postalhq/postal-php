@@ -53,6 +53,21 @@ final class ServiceProviderTest extends TestCase
 
         $this->assertSame('https://api.postal.so', $app['config']->get('postal.base_url'));
         $this->assertSame(2, $app['config']->get('postal.max_retries'));
+        $this->assertSame(30.0, $app['config']->get('postal.timeout'));
+        $this->assertSame(5.0, $app['config']->get('postal.connect_timeout'));
+    }
+
+    public function test_passes_the_timeout_options_from_the_config_to_the_client(): void
+    {
+        $app = $this->app(['key' => 'ps_x', 'max_retries' => '1', 'timeout' => '10', 'connect_timeout' => '2.5']);
+        $client = $app->make(Client::class);
+        $properties = [];
+
+        foreach (['maxRetries', 'timeout', 'connectTimeout'] as $name) {
+            $properties[$name] = (new \ReflectionProperty($client, $name))->getValue($client);
+        }
+
+        $this->assertSame(['maxRetries' => 1, 'timeout' => 10.0, 'connectTimeout' => 2.5], $properties);
     }
 
     public function test_adds_the_postal_mail_transport(): void

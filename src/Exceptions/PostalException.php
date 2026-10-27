@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Postal\Exceptions;
 
+use Postal\RateLimit;
 use RuntimeException;
 use Throwable;
 
@@ -18,6 +19,7 @@ class PostalException extends RuntimeException
 {
     /**
      * @param  array<string, mixed>|null  $body  O corpo do erro, com campos extras como `errors`.
+     * @param  RateLimit|null  $rateLimit  O limite de requisições dos cabeçalhos da resposta (na 429, com `Retry-After`).
      */
     public function __construct(
         public readonly int $statusCode,
@@ -25,6 +27,7 @@ class PostalException extends RuntimeException
         string $message,
         public readonly ?int $retryAfter = null,
         public readonly ?array $body = null,
+        public readonly ?RateLimit $rateLimit = null,
         ?Throwable $previous = null,
     ) {
         parent::__construct($message, $statusCode, $previous);

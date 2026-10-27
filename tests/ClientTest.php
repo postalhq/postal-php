@@ -10,6 +10,7 @@ use Postal\Client;
 use Postal\Exceptions\NetworkException;
 use Postal\Exceptions\PostalException;
 use Postal\Http\Transport;
+use Postal\RateLimit;
 
 final class ClientTest extends TestCase
 {
@@ -168,7 +169,7 @@ final class ClientTest extends TestCase
         {
             public int $calls = 0;
 
-            public function send(string $method, string $url, array $headers, ?string $body, float $timeout): array
+            public function send(string $method, string $url, array $headers, ?string $body, float $timeout, float $connectTimeout = 5.0): array
             {
                 $this->calls++;
 
@@ -185,6 +186,129 @@ final class ClientTest extends TestCase
         }
 
         $this->assertSame(3, $transport->calls);
+    }
+
+    public function test_passes_the_default_timeouts_to_the_transport(): void
+    {
+        $transport = FakeTransport::replying(['id' => 'e1']);
+        $this->client($transport)->domains->list();
+
+        $this->assertSame(30.0, $transport->requests[0]['timeout']);
+        $this->assertSame(5.0, $transport->requests[0]['connect_timeout']);
+    }
+
+    public function test_passes_custom_timeouts_to_the_transport(): void
+    {
+        $transport = FakeTransport::replying(['id' => 'e1']);
+        $this->client($transport, ['timeout' => 10, 'connect_timeout' => 1.5])->domains->list();
+
+        $this->assertSame(10.0, $transport->requests[0]['timeout']);
+        $this->assertSame(1.5, $transport->requests[0]['connect_timeout']);
+    }
+
+    public function test_connect_timeouts_are_retried_and_then_thrown_with_a_clear_message(): void
+    {
+        $transport = new class implements Transport
+        {
+            public int $calls = 0;
+
+            public function send(string $method, string $url, array $headers, ?string $body, float $timeout, float $connectTimeout = 5.0): array
+            {
+                $this->calls++;
+
+                throw new NetworkException('connect_timeout', 'Tempo esgotado ao conectar ao Postal (connect_timeout de '.$connectTimeout.' s).');
+            }
+        };
+
+        try {
+            (new Client('ps_x', ['transport' => $transport, 'retry_delay' => 0]))->domains->list();
+            $this->fail('Esperava uma exceção.');
+        } catch (NetworkException $exception) {
+            $this->assertSame('connect_timeout', $exception->getErrorName());
+            $this->assertStringContainsString('connect_timeout', $exception->getMessage());
+            $this->assertSame(0, $exception->getStatusCode());
+        }
+
+        $this->assertSame(3, $transport->calls);
+    }
+
+    public function test_the_rate_limit_is_null_before_any_request(): void
+    {
+        $this->assertNull($this->client(FakeTransport::replying([]))->rateLimit());
+    }
+
+    public function test_remembers_the_rate_limit_headers_of_the_last_response(): void
+    {
+        $transport = new FakeTransport(fn (array $request, int $call): array => [
+            'status' => 200,
+            'body' => [],
+            'headers' => ['x-ratelimit-limit' => '10', 'x-ratelimit-remaining' => (string) (10 - $call)],
+        ]);
+        $postal = $this->client($transport);
+
+        $postal->domains->list();
+        $this->assertEquals(new RateLimit(limit: 10, remaining: 9), $postal->rateLimit());
+
+        $postal->domains->list();
+        $this->assertSame(10, $postal->rateLimit()?->limit);
+        $this->assertSame(8, $postal->rateLimit()?->remaining);
+        $this->assertNull($postal->rateLimit()?->retryAfter);
+        $this->assertNull($postal->rateLimit()?->resetAt);
+    }
+
+    public function test_the_rate_limit_stays_null_when_the_response_has_no_headers(): void
+    {
+        $postal = $this->client(FakeTransport::replying(['data' => []]));
+        $postal->domains->list();
+
+        $this->assertNull($postal->rateLimit());
+    }
+
+    public function test_a_response_without_headers_keeps_the_last_known_rate_limit(): void
+    {
+        $transport = new FakeTransport(fn (array $request, int $call): array => [
+            'status' => 200,
+            'body' => [],
+            'headers' => $call === 1 ? ['x-ratelimit-limit' => '5', 'x-ratelimit-remaining' => '4'] : [],
+        ]);
+        $postal = $this->client($transport);
+        $postal->domains->list();
+        $postal->domains->list();
+
+        $this->assertSame(4, $postal->rateLimit()?->remaining);
+    }
+
+    public function test_a_429_carries_the_rate_limit_with_retry_after_and_reset(): void
+    {
+        $headers = ['x-ratelimit-limit' => '2', 'x-ratelimit-remaining' => '0', 'retry-after' => '3', 'x-ratelimit-reset' => '1790000000'];
+        $transport = new FakeTransport(fn (): array => FakeTransport::error(429, 'rate_limit_exceeded', 'Too many requests', $headers));
+        $postal = $this->client($transport, ['max_retries' => 0]);
+
+        try {
+            $postal->domains->list();
+            $this->fail('Esperava uma exceção.');
+        } catch (PostalException $exception) {
+            $this->assertEquals(new RateLimit(limit: 2, remaining: 0, retryAfter: 3, resetAt: 1790000000), $exception->rateLimit);
+            $this->assertSame(3, $exception->retryAfter);
+        }
+
+        $this->assertEquals(new RateLimit(limit: 2, remaining: 0, retryAfter: 3, resetAt: 1790000000), $postal->rateLimit());
+    }
+
+    public function test_the_rate_limit_works_for_a_sending_only_key_without_extra_requests(): void
+    {
+        $transport = new FakeTransport(fn (): array => ['status' => 200, 'body' => ['id' => 'em_1'], 'headers' => ['x-ratelimit-limit' => '10', 'x-ratelimit-remaining' => '9']]);
+        $postal = $this->client($transport);
+        $postal->emails->send(['from' => 'a@b.com', 'to' => 'c@d.com', 'subject' => 's', 'text' => 't']);
+
+        $this->assertSame(9, $postal->rateLimit()?->remaining);
+        $this->assertCount(1, $transport->requests);
+    }
+
+    public function test_ignores_malformed_rate_limit_headers(): void
+    {
+        $this->assertNull(RateLimit::fromHeaders(['x-ratelimit-limit' => 'abc', 'retry-after' => 'Wed, 21 Oct 2026 07:28:00 GMT']));
+        $this->assertNull(RateLimit::fromHeaders([]));
     }
 
     public function test_a_non_json_error_becomes_a_generic_exception(): void

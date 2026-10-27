@@ -55,8 +55,9 @@ class PostalServiceProvider extends ServiceProvider
     {
         return new Client($config['key'] ?? null, array_filter([
             'base_url' => $config['base_url'] ?? null,
-            'max_retries' => $config['max_retries'] ?? null,
-            'timeout' => $config['timeout'] ?? null,
+            'max_retries' => isset($config['max_retries']) ? (int) $config['max_retries'] : null,
+            'timeout' => isset($config['timeout']) ? (float) $config['timeout'] : null,
+            'connect_timeout' => isset($config['connect_timeout']) ? (float) $config['connect_timeout'] : null,
             'user_agent' => 'laravel',
         ], static fn (mixed $value): bool => $value !== null));
     }
