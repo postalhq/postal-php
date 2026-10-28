@@ -113,7 +113,7 @@ $email = $postal->emails->get($result['id']); // status em last_event e históri
 $page = $postal->emails->list(['status' => ['bounced', 'complained'], 'limit' => 50]);
 ```
 
-`emails->get`, `list` e os demais métodos de leitura exigem uma chave de acesso total.
+`emails->list` e os demais métodos de leitura exigem uma chave de acesso total. Duas leituras também funcionam com uma chave só de envio: `emails->get` (só os e-mails que ela enviou) e `usage()` (sem os créditos de verificação).
 
 ### Códigos de uso único (`OTP-Token`)
 
