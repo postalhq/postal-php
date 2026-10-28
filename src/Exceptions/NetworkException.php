@@ -7,9 +7,9 @@ namespace Postal\Exceptions;
 use Throwable;
 
 /**
- * Falha de rede ou tempo esgotado: a API não chegou a responder. O status é 0 e o nome é
- * `network_error`, `timeout` (a API aceitou a conexão mas não respondeu a tempo)
- * ou `connect_timeout` (não foi possível abrir a conexão a tempo).
+ * Network failure or timeout: the API did not get to answer. The status is 0 and the name is
+ * `network_error`, `timeout` (the API accepted the connection but did not answer in time)
+ * or `connect_timeout` (the connection could not be opened in time).
  */
 class NetworkException extends PostalException
 {

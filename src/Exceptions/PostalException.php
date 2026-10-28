@@ -9,17 +9,17 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Erro devolvido pela API do Postal (qualquer status fora de 2xx).
+ * Error returned by the Postal API (any status outside 2xx).
  *
- * `getErrorName()` é o `name` do Postal, um código estável em inglês (`validation_error`,
- * `rate_limit_exceeded`, `invalid_api_key`...) que deve ser usado para tratar o erro; `getMessage()` é
- * a `message` do Postal, escrita para pessoas, e pode mudar.
+ * `getErrorName()` is Postal's `name`, a stable code in English (`validation_error`,
+ * `rate_limit_exceeded`, `invalid_api_key`...) that should be used to handle the error; `getMessage()` is
+ * Postal's `message`, written for people, and may change.
  */
 class PostalException extends RuntimeException
 {
     /**
-     * @param  array<string, mixed>|null  $body  O corpo do erro, com campos extras como `errors`.
-     * @param  RateLimit|null  $rateLimit  O limite de requisições dos cabeçalhos da resposta (na 429, com `Retry-After`).
+     * @param  array<string, mixed>|null  $body  The error body, with extra fields such as `errors`.
+     * @param  RateLimit|null  $rateLimit  The request limit from the response headers (on a 429, with `Retry-After`).
      */
     public function __construct(
         public readonly int $statusCode,
@@ -34,7 +34,7 @@ class PostalException extends RuntimeException
     }
 
     /**
-     * Status HTTP da resposta (0 quando não houve resposta).
+     * HTTP status of the response (0 when there was no response).
      */
     public function getStatusCode(): int
     {
@@ -42,7 +42,7 @@ class PostalException extends RuntimeException
     }
 
     /**
-     * O `name` do Postal, como `validation_error`.
+     * Postal's `name`, such as `validation_error`.
      */
     public function getErrorName(): string
     {

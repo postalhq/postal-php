@@ -10,11 +10,11 @@ use Illuminate\Support\ServiceProvider;
 use Postal\Client;
 
 /**
- * Liga o Postal ao Laravel (auto-discovery): registra o {@see Client} no container, publica
- * `config/postal.php` e cria o transporte de e-mail `postal`.
+ * Connects Postal to Laravel (auto-discovery): registers the {@see Client} in the container, publishes
+ * `config/postal.php` and creates the `postal` mail transport.
  *
- * Para mandar os e-mails do Laravel pelo Postal, defina `MAIL_MAILER=postal` e acrescente em
- * `config/mail.php`, dentro de `mailers`:
+ * To send Laravel's emails through Postal, set `MAIL_MAILER=postal` and add to
+ * `config/mail.php`, inside `mailers`:
  *
  * ```php
  * 'postal' => ['transport' => 'postal'],
@@ -38,7 +38,7 @@ class PostalServiceProvider extends ServiceProvider
 
         $this->callAfterResolving('mail.manager', function (MailManager $manager): void {
             $manager->extend('postal', function (array $config): PostalTransport {
-                // Um mailer pode ter a própria chave: 'postal' => ['transport' => 'postal', 'key' => env('...')].
+                // A mailer can have its own key: 'postal' => ['transport' => 'postal', 'key' => env('...')].
                 $client = isset($config['key'])
                     ? self::makeClient([...$this->app['config']->get('postal', []), 'key' => $config['key']])
                     : $this->app->make(Client::class);

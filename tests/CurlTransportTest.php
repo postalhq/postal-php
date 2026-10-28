@@ -12,7 +12,7 @@ use Postal\Http\CurlTransport;
 use Postal\RateLimit;
 
 /**
- * Testa o transporte de verdade (ext-curl) contra um servidor HTTP local, o `php -S`.
+ * Tests the real transport (ext-curl) against a local HTTP server, `php -S`.
  */
 final class CurlTransportTest extends TestCase
 {
@@ -46,7 +46,7 @@ final class CurlTransportTest extends TestCase
             usleep(100_000);
         }
 
-        self::fail('O servidor de teste não subiu.');
+        self::fail('The test server did not start.');
     }
 
     public static function tearDownAfterClass(): void
@@ -95,7 +95,7 @@ final class CurlTransportTest extends TestCase
 
         try {
             $client->usage();
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame('rate_limit_exceeded', $exception->getErrorName());
             $this->assertSame(7, $exception->retryAfter);
@@ -108,7 +108,7 @@ final class CurlTransportTest extends TestCase
     {
         try {
             (new CurlTransport)->send('GET', self::$baseUrl.'/slow', [], null, 0.3);
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (NetworkException $exception) {
             $this->assertSame('timeout', $exception->getErrorName());
         }
@@ -116,7 +116,7 @@ final class CurlTransportTest extends TestCase
 
     public function test_a_connect_timeout_is_reported_as_such_and_is_faster_than_the_total_timeout(): void
     {
-        // Um servidor que nunca aceita, com fila de 1: depois que ela enche, o kernel descarta os SYN seguintes.
+        // A server that never accepts, with a backlog of 1: once it fills, the kernel drops the following SYNs.
         $server = stream_socket_server('tcp://127.0.0.1:0', $errorCode, $errorMessage, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, stream_context_create(['socket' => ['backlog' => 1]]));
         $this->assertNotFalse($server);
         $name = (string) stream_socket_get_name($server, false);
@@ -130,7 +130,7 @@ final class CurlTransportTest extends TestCase
 
         try {
             (new CurlTransport)->send('GET', 'http://'.$name.'/', [], null, 10, 0.3);
-            $this->markTestSkipped('Este ambiente não deixa a conexão pendente.');
+            $this->markTestSkipped('This environment does not leave the connection hanging.');
         } catch (NetworkException $exception) {
             $this->assertSame('connect_timeout', $exception->getErrorName());
             $this->assertStringContainsString('connect_timeout', $exception->getMessage());
@@ -144,7 +144,7 @@ final class CurlTransportTest extends TestCase
     {
         try {
             (new CurlTransport)->send('GET', self::$baseUrl.'/slow', [], null, 0.3, 0.1);
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (NetworkException $exception) {
             $this->assertSame('timeout', $exception->getErrorName());
         }

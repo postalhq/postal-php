@@ -9,14 +9,14 @@ use Generator;
 class Events extends Resource
 {
     /**
-     * Envia um evento (`POST /events`) e inicia as automações que usam esse nome como gatilho. Funciona com
-     * chave só de envio. Repetir com a mesma `$idempotencyKey` não registra o evento de novo.
+     * Sends an event (`POST /events`) and starts the automations that use that name as a trigger. Works with
+     * a sending-only key. Repeating with the same `$idempotencyKey` does not record the event again.
      *
-     * Campos: `name` (obrigatório), `contact` (e-mail, ID, `external_id:<id>` ou array), `external_id`,
-     * `properties`, `contact_properties` e `occurred_at` (ISO 8601 ou `DateTimeInterface`).
+     * Fields: `name` (required), `contact` (email, ID, `external_id:<id>` or array), `external_id`,
+     * `properties`, `contact_properties` and `occurred_at` (ISO 8601 or `DateTimeInterface`).
      *
      * ```php
-     * $postal->events->send(['name' => 'signup', 'contact' => 'fulano@exemplo.com', 'properties' => ['plan' => 'free']]);
+     * $postal->events->send(['name' => 'signup', 'contact' => 'jane@example.com', 'properties' => ['plan' => 'free']]);
      * ```
      *
      * @param  array<string, mixed>  $params
@@ -33,8 +33,8 @@ class Events extends Resource
     }
 
     /**
-     * Uma página de eventos dos últimos 90 dias (`GET /events`). Exige chave de acesso total.
-     * Filtros: `limit`, `after`, `before`, `name` (texto ou lista), `contact`.
+     * A page of events from the last 90 days (`GET /events`). Needs a full-access key.
+     * Filters: `limit`, `after`, `before`, `name` (text or list), `contact`.
      *
      * @param  array<string, mixed>  $params
      * @return array{object: string, has_more: bool, data: list<array<string, mixed>>}
@@ -63,7 +63,7 @@ class Events extends Resource
     }
 
     /**
-     * Os nomes de evento que a conta já enviou (`GET /events/names`).
+     * The event names the account has already sent (`GET /events/names`).
      *
      * @return array<string, mixed>
      */

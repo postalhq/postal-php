@@ -9,13 +9,13 @@ use Generator;
 class Emails extends Resource
 {
     /**
-     * Envia um e-mail (`POST /emails`).
+     * Sends an email (`POST /emails`).
      *
-     * Campos: `from`, `to`, `subject`, `html`/`text` (ou `template`), `cc`, `bcc`, `reply_to`, `headers`,
-     * `tags`, `attachments` e `scheduled_at` (ISO 8601 ou `DateTimeInterface`).
+     * Fields: `from`, `to`, `subject`, `html`/`text` (or `template`), `cc`, `bcc`, `reply_to`, `headers`,
+     * `tags`, `attachments` and `scheduled_at` (ISO 8601 or `DateTimeInterface`).
      *
-     * Sem `$idempotencyKey`, o SDK gera uma chave para esta chamada e a reaproveita nas retentativas, então
-     * uma repetição após timeout ou erro 5xx não duplica o envio.
+     * Without `$idempotencyKey`, the SDK generates a key for this call and reuses it across retries, so
+     * a repeat after a timeout or a 5xx error does not duplicate the send.
      *
      * @param  array<string, mixed>  $params
      * @return array{id: string}
@@ -31,7 +31,7 @@ class Emails extends Resource
     }
 
     /**
-     * Envia até 100 e-mails numa requisição (`POST /emails/batch`). Ou todos entram na fila, ou nenhum.
+     * Sends up to 100 emails in one request (`POST /emails/batch`). Either all are queued, or none.
      *
      * @param  list<array<string, mixed>>  $emails
      * @return array{data: list<array{id: string}>}
@@ -43,7 +43,7 @@ class Emails extends Resource
     }
 
     /**
-     * Um e-mail com o conteúdo e o histórico de eventos (`GET /emails/{id}`).
+     * One email with its content and event history (`GET /emails/{id}`).
      *
      * @return array<string, mixed>
      */
@@ -53,9 +53,9 @@ class Emails extends Resource
     }
 
     /**
-     * Uma página de e-mails, do mais recente para o mais antigo (`GET /emails`). Exige chave de acesso total.
+     * A page of emails, newest to oldest (`GET /emails`). Needs a full-access key.
      *
-     * Filtros: `limit`, `after`, `before`, `search`, `status` (texto ou lista), `domain_id`, `api_key_id`,
+     * Filters: `limit`, `after`, `before`, `search`, `status` (text or list), `domain_id`, `api_key_id`,
      * `start_date`, `end_date`.
      *
      * @param  array<string, mixed>  $params
@@ -68,7 +68,7 @@ class Emails extends Resource
     }
 
     /**
-     * Percorre todos os e-mails que batem com o filtro, página a página.
+     * Walks through all emails matching the filter, page by page.
      *
      * @param  array<string, mixed>  $params
      * @return Generator<int, array<string, mixed>>
@@ -79,7 +79,7 @@ class Emails extends Resource
     }
 
     /**
-     * Muda a data de um e-mail agendado (`PATCH /emails/{id}`).
+     * Changes the date of a scheduled email (`PATCH /emails/{id}`).
      *
      * @return array<string, mixed>
      */
@@ -89,7 +89,7 @@ class Emails extends Resource
     }
 
     /**
-     * Cancela um e-mail agendado (`POST /emails/{id}/cancel`).
+     * Cancels a scheduled email (`POST /emails/{id}/cancel`).
      *
      * @return array<string, mixed>
      */
@@ -99,7 +99,7 @@ class Emails extends Resource
     }
 
     /**
-     * A mensagem como foi enviada, em formato RFC 5322 (`GET /emails/{id}/raw`).
+     * The message as it was sent, in RFC 5322 format (`GET /emails/{id}/raw`).
      */
     public function raw(string $id): string
     {

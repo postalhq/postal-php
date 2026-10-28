@@ -21,7 +21,7 @@ final class PostalTransportTest extends TestCase
     protected function setUp(): void
     {
         if (! class_exists(Mailer::class)) {
-            $this->markTestSkipped('symfony/mailer não está instalado.');
+            $this->markTestSkipped('symfony/mailer is not installed.');
         }
     }
 
@@ -120,7 +120,7 @@ final class PostalTransportTest extends TestCase
         $body = $http->requests[0]['json'];
 
         $this->assertSame([['name' => 'tag', 'value' => 'boas_vindas'], ['name' => 'pedido_id', 'value' => '10482']], $body['tags']);
-        $this->assertArrayNotHasKey('headers', $body, 'as etiquetas não viram cabeçalhos');
+        $this->assertArrayNotHasKey('headers', $body, 'tags do not become headers');
     }
 
     public function test_envelope_only_recipients_go_as_bcc(): void
@@ -141,7 +141,7 @@ final class PostalTransportTest extends TestCase
 
         try {
             $this->mailer($http)->send($email);
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (TransportException $exception) {
             $this->assertStringContainsString('The sending domain is not verified.', $exception->getMessage());
         }

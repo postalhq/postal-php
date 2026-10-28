@@ -16,16 +16,16 @@ use Symfony\Component\Mime\MessageConverter;
 use Throwable;
 
 /**
- * Transporte de e-mail do Symfony Mailer (e do Laravel) que envia pela API do Postal (`POST /emails`).
+ * Symfony Mailer (and Laravel) mail transport that sends through the Postal API (`POST /emails`).
  *
- * Os anexos, os cabeçalhos extras e as etiquetas (`TagHeader`, `MetadataHeader`) vão junto. O ID do
- * e-mail no Postal fica em `SentMessage::getMessageId()` e no cabeçalho `X-Postal-Email-Id` de
+ * Attachments, extra headers and tags (`TagHeader`, `MetadataHeader`) go along. The ID of the
+ * email in Postal is in `SentMessage::getMessageId()` and in the `X-Postal-Email-Id` header of
  * `SentMessage::getOriginalMessage()`.
  */
 class PostalTransport extends AbstractTransport
 {
     /**
-     * Cabeçalhos que a API não deixa sobrescrever ou que o Postal monta sozinho.
+     * Headers the API does not let you override or that Postal builds by itself.
      */
     private const RESERVED_HEADERS = [
         'from', 'to', 'cc', 'bcc', 'subject', 'reply-to', 'sender', 'date', 'message-id', 'return-path',
@@ -49,7 +49,7 @@ class PostalTransport extends AbstractTransport
         try {
             $response = $this->client->emails->send($this->payload($email, $message));
         } catch (Throwable $exception) {
-            throw new TransportException('Não foi possível enviar pelo Postal: '.$exception->getMessage(), (int) $exception->getCode(), $exception);
+            throw new TransportException('Could not send through Postal: '.$exception->getMessage(), (int) $exception->getCode(), $exception);
         }
 
         $message->setMessageId($response['id']);
@@ -57,7 +57,7 @@ class PostalTransport extends AbstractTransport
     }
 
     /**
-     * O corpo de `POST /emails` para a mensagem.
+     * The body of `POST /emails` for the message.
      *
      * @return array<string, mixed>
      */
@@ -72,14 +72,14 @@ class PostalTransport extends AbstractTransport
             [...$email->getTo(), ...$email->getCc(), ...$email->getBcc()],
         );
 
-        // Destinatários só do envelope (por exemplo, um Bcc que o Laravel tirou dos cabeçalhos) vão como cópia oculta.
+        // Recipients only in the envelope (for example, a Bcc that Laravel took out of the headers) go as blind copies.
         foreach ($message->getEnvelope()->getRecipients() as $recipient) {
             if (! in_array(strtolower($recipient->getAddress()), $seen, true)) {
                 $bcc[] = $recipient->getAddress();
             }
         }
 
-        // A API exige "to": uma mensagem só com cópias ocultas manda todos os endereços em "to".
+        // The API requires "to": a message with only blind copies sends all the addresses in "to".
         if ($to === [] && $cc === []) {
             $to = $bcc;
             $bcc = [];
@@ -151,7 +151,7 @@ class PostalTransport extends AbstractTransport
     }
 
     /**
-     * `TagHeader` vira a etiqueta `tag`; cada `MetadataHeader`, uma etiqueta com o nome da chave.
+     * `TagHeader` becomes the `tag` tag; each `MetadataHeader`, a tag named after its key.
      *
      * @return list<array{name: string, value: string}>
      */
@@ -217,7 +217,7 @@ class PostalTransport extends AbstractTransport
     }
 
     /**
-     * A etiqueta do Postal aceita só letras ASCII, números, `_` e `-`, até 256 caracteres.
+     * A Postal tag accepts only ASCII letters, numbers, `_` and `-`, up to 256 characters.
      */
     private static function tagText(string $value): string
     {

@@ -8,7 +8,7 @@ use Closure;
 use Postal\Http\Transport;
 
 /**
- * Transporte HTTP falso: guarda as requisições e responde com o que o teste programar.
+ * Fake HTTP transport: keeps the requests and answers with whatever the test sets up.
  */
 final class FakeTransport implements Transport
 {
@@ -52,7 +52,7 @@ final class FakeTransport implements Transport
     }
 
     /**
-     * "METHOD /caminho" de cada requisição.
+     * "METHOD /path" of each request.
      *
      * @return list<string>
      */

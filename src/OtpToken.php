@@ -7,9 +7,9 @@ namespace Postal;
 use Postal\Exceptions\PostalException;
 
 /**
- * Monta o cabeçalho `OTP-Token` (draft-goto-otp-token), que entrega o código de um e-mail de verificação de
- * forma legível por máquina e presa a uma origem, para que o cliente de e-mail o ofereça à página que o pediu:
- * `"123456"; origin="https://exemplo.com"`.
+ * Builds the `OTP-Token` header (draft-goto-otp-token), which delivers the code of a verification email in a
+ * machine-readable way, bound to an origin, so that the mail client offers it to the page that asked for it:
+ * `"123456"; origin="https://example.com"`.
  */
 final class OtpToken
 {
@@ -18,36 +18,36 @@ final class OtpToken
     private const LOOPBACK_HOSTS = ['localhost', '127.0.0.1'];
 
     /**
-     * O valor do cabeçalho `OTP-Token`, com o escape do RFC 9651 (só `\` e `"`).
+     * The value of the `OTP-Token` header, with RFC 9651 escaping (only `\` and `"`).
      *
-     * O código precisa ser ASCII imprimível (de espaço a `~`) e não vazio. A origem precisa estar na forma
-     * canônica: `https://host[:porta]` em minúsculas, sem porta padrão, sem caminho nem barra no fim (`http`
-     * só vale para `localhost` e `127.0.0.1`). Qualquer outra coisa lança `PostalException` (`statusCode` 0,
-     * `validation_error`), antes de a API recusar o envio com 422.
+     * The code must be printable ASCII (from space to `~`) and non-empty. The origin must be in
+     * canonical form: `https://host[:port]` in lowercase, no default port, no path and no trailing slash (`http`
+     * is only valid for `localhost` and `127.0.0.1`). Anything else throws `PostalException` (`statusCode` 0,
+     * `validation_error`), before the API refuses the send with 422.
      *
      * ```php
      * $postal->emails->send([
-     *     'from' => 'voce@seudominio.com.br',
-     *     'to' => 'fulano@exemplo.com',
-     *     'subject' => 'Seu código',
-     *     'html' => '<p>Seu código: 123456</p>',
-     *     'headers' => ['OTP-Token' => Postal\OtpToken::header('123456', 'https://exemplo.com')],
+     *     'from' => 'you@yourdomain.com',
+     *     'to' => 'jane@example.com',
+     *     'subject' => 'Your code',
+     *     'html' => '<p>Your code: 123456</p>',
+     *     'headers' => ['OTP-Token' => Postal\OtpToken::header('123456', 'https://example.com')],
      * ]);
      * ```
      *
-     * @throws PostalException Se o código ou a origem não servirem.
+     * @throws PostalException If the code or the origin will not do.
      */
     public static function header(string $code, string $origin): string
     {
         if ($code === '' || preg_match('/^[\x20-\x7E]+$/D', $code) !== 1) {
-            throw self::invalid('O código do OTP-Token precisa ter ao menos um caractere e só ASCII imprimível (de espaço a "~").');
+            throw self::invalid('The OTP-Token code needs at least one character and only printable ASCII (from space to "~").');
         }
 
         if (! self::isCanonicalOrigin($origin)) {
             $canonical = self::canonicalOf($origin);
 
             throw self::invalid(
-                'A origem do OTP-Token precisa ser a origem https canônica de quem pede o código, como "https://exemplo.com" (minúsculas, sem caminho, sem barra no fim e sem porta padrão).'
+                'The OTP-Token origin must be the canonical https origin of whoever asks for the code, such as "https://example.com" (lowercase, no path, no trailing slash and no default port).'
                 .($canonical === null ? '' : " Use \"{$canonical}\".")
             );
         }
@@ -96,12 +96,12 @@ final class OtpToken
             }
         }
 
-        // Um último rótulo numérico só vale se o nome todo for um endereço IPv4 com quatro partes.
+        // A last numeric label only counts if the whole name is an IPv4 address with four parts.
         return strlen($host) <= 253 && (! ctype_digit($labels[array_key_last($labels)]) || filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false);
     }
 
     /**
-     * A origem canônica do endereço dado, se ele tiver uma que sirva.
+     * The canonical origin of the given address, if it has one that will do.
      */
     private static function canonicalOf(string $url): ?string
     {

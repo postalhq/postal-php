@@ -54,7 +54,7 @@ class Segments extends Resource
     }
 
     /**
-     * Apaga só a lista: os contatos continuam na audiência.
+     * Deletes only the list: the contacts stay in the audience.
      *
      * @return array<string, mixed>
      */

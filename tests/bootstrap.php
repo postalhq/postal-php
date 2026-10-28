@@ -3,16 +3,16 @@
 declare(strict_types=1);
 
 /*
- * Carrega o autoload do pacote (composer install ou composer dump-autoload).
+ * Loads the package's autoload (composer install or composer dump-autoload).
  *
- * Os testes do transporte do Laravel precisam de symfony/mailer e laravel/framework. Se o PHPUnit usado
- * não os carrega sozinho, aponte POSTAL_EXTRA_AUTOLOAD para o autoload de um projeto que os tenha.
+ * The Laravel transport tests need symfony/mailer and laravel/framework. If the PHPUnit in use
+ * does not load them by itself, point POSTAL_EXTRA_AUTOLOAD at the autoload of a project that has them.
  */
 
 $autoload = __DIR__.'/../vendor/autoload.php';
 
 if (! is_file($autoload)) {
-    fwrite(STDERR, "Rode \"composer install\" (ou \"composer dump-autoload\") antes dos testes.\n");
+    fwrite(STDERR, "Run \"composer install\" (or \"composer dump-autoload\") before the tests.\n");
     exit(1);
 }
 

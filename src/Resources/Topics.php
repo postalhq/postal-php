@@ -28,7 +28,7 @@ class Topics extends Resource
 
     /**
      * @param  array{name: string, default_subscription: string, description?: string|null, visibility?: string}  $params
-     *                                                                                                                     `default_subscription` é `opt_in` ou `opt_out` e não muda depois de criado.
+     *                                                                                                                     `default_subscription` is `opt_in` or `opt_out` and does not change after creation.
      * @return array<string, mixed>
      */
     public function create(array $params): array

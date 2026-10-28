@@ -17,19 +17,19 @@ use Postal\Resources\Topics;
 use Postal\Resources\Webhooks;
 
 /**
- * Cliente da API do Postal.
+ * Postal API client.
  *
- * Os campos de entrada e de saída têm os mesmos nomes da API (snake_case), então a documentação em
- * https://postal.so/docs/api vale direto para o SDK. As respostas são arrays.
+ * Input and output fields have the same names as the API (snake_case), so the documentation at
+ * https://postal.so/en/docs/api applies directly to the SDK. Responses are arrays.
  *
  * ```php
  * $postal = new Postal\Client(getenv('POSTAL_API_KEY'));
  *
  * $postal->emails->send([
- *     'from' => 'Minha empresa <voce@seudominio.com.br>',
- *     'to' => 'fulano@exemplo.com',
- *     'subject' => 'Olá',
- *     'html' => '<p>Bem-vindo!</p>',
+ *     'from' => 'Acme Store <you@yourdomain.com>',
+ *     'to' => 'jane@example.com',
+ *     'subject' => 'Hello',
+ *     'html' => '<p>Welcome!</p>',
  * ]);
  * ```
  */
@@ -40,7 +40,7 @@ final class Client
     public const DEFAULT_BASE_URL = 'https://api.postal.so';
 
     /**
-     * Respostas 429 que repetir não resolve: a cota do plano acabou.
+     * A 429 that retrying will not fix: the plan quota ran out.
      */
     private const NON_RETRYABLE_429 = ['daily_quota_exceeded', 'monthly_quota_exceeded', 'ai_credits_exhausted'];
 
@@ -79,20 +79,20 @@ final class Client
     private ?RateLimit $rateLimit = null;
 
     /**
-     * @param  string|null  $apiKey  Chave de API (`ps_...`). Sem chave, usa a variável de ambiente `POSTAL_API_KEY`.
+     * @param  string|null  $apiKey  API key (`ps_...`). Without a key, uses the `POSTAL_API_KEY` environment variable.
      * @param  array{base_url?: string, max_retries?: int, timeout?: float|int, connect_timeout?: float|int, retry_delay?: int, transport?: Transport, user_agent?: string}  $options
-     *                                                                                                                                                                                 Opções: `max_retries` são as tentativas extras em 429 e 5xx (padrão 2); `timeout`, os segundos por
-     *                                                                                                                                                                                 tentativa, do início ao fim (padrão 30); `connect_timeout`, os segundos só para abrir a conexão
-     *                                                                                                                                                                                 (padrão 5; 0 desliga); `retry_delay`, a espera base em milissegundos, que dobra a cada tentativa
-     *                                                                                                                                                                                 (padrão 500). Com a API fora do ar, o pior caso é cerca de
-     *                                                                                                                                                                                 `(max_retries + 1) × connect_timeout` mais as esperas entre tentativas.
+     *                                                                                                                                                                                 Options: `max_retries` is the extra attempts on 429 and 5xx (default 2); `timeout`, the seconds per
+     *                                                                                                                                                                                 attempt, from start to finish (default 30); `connect_timeout`, the seconds just to open the connection
+     *                                                                                                                                                                                 (default 5; 0 turns it off); `retry_delay`, the base wait in milliseconds, which doubles on every attempt
+     *                                                                                                                                                                                 (default 500). With the API down, the worst case is about
+     *                                                                                                                                                                                 `(max_retries + 1) × connect_timeout` plus the waits between attempts.
      */
     public function __construct(?string $apiKey = null, array $options = [])
     {
         $apiKey ??= (getenv('POSTAL_API_KEY') ?: null);
 
         if ($apiKey === null || $apiKey === '') {
-            throw new PostalException(0, 'missing_api_key', 'Informe a chave de API: new Client("ps_...") ou a variável de ambiente POSTAL_API_KEY.');
+            throw new PostalException(0, 'missing_api_key', 'Provide the API key: new Client("ps_...") or the POSTAL_API_KEY environment variable.');
         }
 
         $this->apiKey = $apiKey;
@@ -114,11 +114,11 @@ final class Client
     }
 
     /**
-     * O limite de requisições dos cabeçalhos da última resposta (`X-RateLimit-Limit`, `X-RateLimit-Remaining` e,
-     * na 429, `Retry-After` e `X-RateLimit-Reset`), inclusive de respostas de erro.
+     * The request limit from the headers of the last response (`X-RateLimit-Limit`, `X-RateLimit-Remaining` and,
+     * on a 429, `Retry-After` and `X-RateLimit-Reset`), including error responses.
      *
-     * Funciona com chave só de envio e não faz requisição extra (diferente de {@see usage()}). Devolve `null`
-     * até chegar uma resposta com esses cabeçalhos; uma resposta sem eles mantém o último valor conhecido.
+     * Works with a sending-only key and makes no extra request (unlike {@see usage()}). Returns `null`
+     * until a response with those headers arrives; a response without them keeps the last known value.
      */
     public function rateLimit(): ?RateLimit
     {
@@ -126,7 +126,7 @@ final class Client
     }
 
     /**
-     * Plano, cotas e limite de requisições da conta (`GET /usage`). Funciona com chave de acesso total ou só de envio (a chave só de envio não vê os créditos).
+     * The account's plan, quotas and request limit (`GET /usage`). Works with a full-access or a sending-only key (a sending-only key does not see the credits).
      *
      * @return array<string, mixed>
      */
@@ -136,7 +136,7 @@ final class Client
     }
 
     /**
-     * Faz uma requisição e devolve o JSON decodificado. Usado pelos recursos.
+     * Makes a request and returns the decoded JSON. Used by the resources.
      *
      * @param  array<string, mixed>  $query
      * @param  array<mixed>|null  $body
@@ -156,14 +156,14 @@ final class Client
         $decoded = json_decode($response['body'], true);
 
         if (! is_array($decoded)) {
-            throw new PostalException($response['status'], 'invalid_response', 'A resposta do Postal não é um JSON válido.');
+            throw new PostalException($response['status'], 'invalid_response', "Postal's response is not valid JSON.");
         }
 
         return $decoded;
     }
 
     /**
-     * Devolve o corpo como texto (para `GET /emails/{id}/raw`).
+     * Returns the body as text (for `GET /emails/{id}/raw`).
      */
     public function requestText(string $method, string $path): string
     {
@@ -193,7 +193,7 @@ final class Client
             $headers['Idempotency-Key'] = $idempotencyKey;
         }
 
-        // Repetir um POST sem chave de idempotência após um 5xx ou uma queda de rede poderia duplicar o efeito.
+        // Repeating a POST without an idempotency key after a 5xx or a network drop could duplicate the effect.
         $retriesServerErrors = in_array($method, ['GET', 'DELETE'], true) || ($options['idempotent'] ?? false) || $idempotencyKey !== null;
         $url = $this->baseUrl.$path.$this->queryString($query);
         $payload = $body === null ? null : json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION);

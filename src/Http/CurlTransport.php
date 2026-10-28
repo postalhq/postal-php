@@ -7,7 +7,7 @@ namespace Postal\Http;
 use Postal\Exceptions\NetworkException;
 
 /**
- * Transporte HTTP com ext-curl.
+ * HTTP transport with ext-curl.
  */
 final class CurlTransport implements Transport
 {
@@ -16,7 +16,7 @@ final class CurlTransport implements Transport
         $handle = curl_init($url);
 
         if ($handle === false) {
-            throw new NetworkException('network_error', 'Não foi possível iniciar o cURL.');
+            throw new NetworkException('network_error', 'Could not start cURL.');
         }
 
         $responseHeaders = [];
@@ -53,18 +53,18 @@ final class CurlTransport implements Transport
         if ($response === false) {
             $code = curl_errno($handle);
             $message = curl_error($handle);
-            // O cURL usa o mesmo código para estourar a conexão e a requisição inteira. Se nem a fase de
-            // preparação (DNS, TCP e TLS) terminou, o tempo esgotou ao conectar.
+            // cURL uses the same code for the connection and the whole request running out. If not even the setup phase
+            // (DNS, TCP and TLS) finished, the time ran out while connecting.
             $connected = curl_getinfo($handle, CURLINFO_PRETRANSFER_TIME) > 0;
             curl_close($handle);
 
             if ($code === CURLE_OPERATION_TIMEDOUT && ! $connected) {
-                throw new NetworkException('connect_timeout', 'Tempo esgotado ao conectar ao Postal (connect_timeout de '.$connectTimeout.' s).');
+                throw new NetworkException('connect_timeout', 'Timed out connecting to Postal (connect_timeout of '.$connectTimeout.' s).');
             }
 
             throw $code === CURLE_OPERATION_TIMEDOUT
-                ? new NetworkException('timeout', 'O Postal não respondeu no tempo limite.')
-                : new NetworkException('network_error', 'Não foi possível falar com o Postal: '.$message);
+                ? new NetworkException('timeout', 'Postal did not answer within the time limit.')
+                : new NetworkException('network_error', 'Could not reach Postal: '.$message);
         }
 
         $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);

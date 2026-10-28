@@ -18,7 +18,7 @@ final class ServiceProviderTest extends TestCase
     protected function setUp(): void
     {
         if (! class_exists(Application::class)) {
-            $this->markTestSkipped('laravel/framework não está instalado.');
+            $this->markTestSkipped('laravel/framework is not installed.');
         }
     }
 
@@ -44,7 +44,7 @@ final class ServiceProviderTest extends TestCase
         $client = $app->make(Client::class);
 
         $this->assertSame($client, $app->make('postal'));
-        $this->assertSame($client, $app->make(Client::class), 'é um singleton');
+        $this->assertSame($client, $app->make(Client::class), 'it is a singleton');
     }
 
     public function test_merges_the_package_config_defaults(): void

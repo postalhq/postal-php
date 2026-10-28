@@ -9,14 +9,14 @@ use Generator;
 use Postal\Client;
 
 /**
- * Base dos recursos da API.
+ * Base of the API resources.
  */
 abstract class Resource
 {
     public function __construct(protected readonly Client $client) {}
 
     /**
-     * Codifica um ID ou e-mail para ir no caminho da URL.
+     * Encodes an ID or email to go in the URL path.
      */
     protected static function segment(string $value): string
     {
@@ -24,7 +24,7 @@ abstract class Resource
     }
 
     /**
-     * Converte `DateTimeInterface` em ISO 8601 e deixa o resto como está.
+     * Converts a `DateTimeInterface` to ISO 8601 and leaves the rest as it is.
      */
     protected static function isoDate(mixed $value): mixed
     {
@@ -32,7 +32,7 @@ abstract class Resource
     }
 
     /**
-     * Percorre todas as páginas de uma lista, de 100 em 100, seguindo `after` até `has_more` ser falso.
+     * Walks through all the pages of a list, 100 at a time, following `after` until `has_more` is false.
      *
      * @param  callable(array<string, mixed>): array<string, mixed>  $fetchPage
      * @param  array<string, mixed>  $params

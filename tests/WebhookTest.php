@@ -19,7 +19,7 @@ final class WebhookTest extends TestCase
     private const TIMESTAMP = 1761321600;
 
     /**
-     * Calculada pelo backend (App\Services\Webhooks\WebhookSigner::sign) para o corpo acima.
+     * Computed by the backend (App\Services\Webhooks\WebhookSigner::sign) for the body above.
      */
     private const BACKEND_SIGNATURE = 'DwAjFL7bHXusfCFHdLLHtcXFwxa+x4E+CzWtO6oF8Tk=';
 
@@ -81,7 +81,7 @@ final class WebhookTest extends TestCase
     {
         try {
             Webhook::verify(self::BODY, self::headers(), 'whsec_b3V0cm8=', now: self::TIMESTAMP);
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (WebhookVerificationException $exception) {
             $this->assertSame('webhook_verification_failed', $exception->getErrorName());
         }
@@ -92,9 +92,9 @@ final class WebhookTest extends TestCase
         foreach ([self::TIMESTAMP + 301, self::TIMESTAMP - 301] as $now) {
             try {
                 Webhook::verify(self::BODY, self::headers(), self::SECRET, now: $now);
-                $this->fail('Esperava uma exceção.');
+                $this->fail('Expected an exception.');
             } catch (WebhookVerificationException $exception) {
-                $this->assertStringContainsString('tolerância', $exception->getMessage());
+                $this->assertStringContainsString('tolerance', $exception->getMessage());
             }
         }
 
@@ -105,17 +105,17 @@ final class WebhookTest extends TestCase
     public function test_rejects_missing_headers_unknown_versions_and_malformed_signatures(): void
     {
         $cases = [
-            [[], 'Faltam'],
-            [self::headers('v2,'.self::BACKEND_SIGNATURE), 'não confere'],
-            [self::headers('v1,abc'), 'não confere'],
-            [self::headers('v1'), 'não confere'],
-            [self::headers(null, ['webhook-timestamp' => 'ontem']), 'inválido'],
+            [[], 'missing'],
+            [self::headers('v2,'.self::BACKEND_SIGNATURE), 'does not match'],
+            [self::headers('v1,abc'), 'does not match'],
+            [self::headers('v1'), 'does not match'],
+            [self::headers(null, ['webhook-timestamp' => 'yesterday']), 'invalid'],
         ];
 
         foreach ($cases as [$headers, $fragment]) {
             try {
                 Webhook::verify(self::BODY, $headers, self::SECRET, now: self::TIMESTAMP);
-                $this->fail('Esperava uma exceção para '.$fragment);
+                $this->fail('Expected an exception for '.$fragment);
             } catch (WebhookVerificationException $exception) {
                 $this->assertStringContainsString($fragment, $exception->getMessage());
             }

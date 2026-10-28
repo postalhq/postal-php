@@ -1,9 +1,9 @@
 {
     "name": "postal-so/postal-php",
-    "description": "SDK oficial do Postal para PHP: envio de e-mails, contatos, eventos, verificação de webhooks e transporte de e-mail para o Laravel.",
+    "description": "Official Postal SDK for PHP: send emails, manage contacts, track events, verify webhooks and a mail transport for Laravel.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["postal", "email", "e-mail", "transacional", "sdk", "laravel", "webhooks"],
+    "keywords": ["postal", "email", "e-mail", "transactional", "transacional", "sdk", "laravel", "webhooks"],
     "homepage": "https://postal.so/docs/sdks",
     "require": {
         "php": "^8.2",
@@ -15,7 +15,7 @@
         "laravel/framework": "^11.0 || ^12.0 || ^13.0"
     },
     "suggest": {
-        "symfony/mailer": "Necessário para o transporte de e-mail do Laravel (MAIL_MAILER=postal). Já vem com o Laravel."
+        "symfony/mailer": "Required for the Laravel mail transport (MAIL_MAILER=postal). It already comes with Laravel."
     },
     "autoload": {
         "psr-4": {

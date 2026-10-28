@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * API falsa para o teste do CurlTransport (php -S). Responde com o que recebeu.
+ * Fake API for the CurlTransport test (php -S). Answers with what it received.
  */
 
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);

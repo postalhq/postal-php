@@ -94,11 +94,11 @@ final class OtpTokenTest extends TestCase
     {
         try {
             OtpToken::header('123456', $origin);
-            $this->fail('Esperava uma exceção para '.$origin);
+            $this->fail('Expected an exception for '.$origin);
         } catch (PostalException $exception) {
             $this->assertSame(0, $exception->getStatusCode());
             $this->assertSame('validation_error', $exception->getErrorName());
-            $this->assertStringContainsString('origem do OTP-Token', $exception->getMessage());
+            $this->assertStringContainsString('OTP-Token origin', $exception->getMessage());
         }
     }
 
@@ -121,11 +121,11 @@ final class OtpTokenTest extends TestCase
     {
         try {
             OtpToken::header($code, 'https://example.com');
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame(0, $exception->getStatusCode());
             $this->assertSame('validation_error', $exception->getErrorName());
-            $this->assertStringContainsString('código do OTP-Token', $exception->getMessage());
+            $this->assertStringContainsString('OTP-Token code', $exception->getMessage());
         }
     }
 
@@ -141,7 +141,7 @@ final class OtpTokenTest extends TestCase
     {
         try {
             OtpToken::header('123456', 'http://example.com');
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertStringNotContainsString('Use "', $exception->getMessage());
         }
@@ -182,7 +182,7 @@ final class OtpTokenTest extends TestCase
 
         try {
             $postal->emails->send([...self::SEND, 'headers' => ['OTP-Token' => '"123456"']]);
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame(422, $exception->getStatusCode());
             $this->assertSame('validation_error', $exception->getErrorName());

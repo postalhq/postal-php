@@ -5,19 +5,19 @@ declare(strict_types=1);
 namespace Postal;
 
 /**
- * Limite de requisições por segundo lido dos cabeçalhos de uma resposta do Postal.
+ * Requests-per-second limit read from the headers of a Postal response.
  *
- * Toda resposta traz `X-RateLimit-Limit` e `X-RateLimit-Remaining`; a `429` traz também `Retry-After`
- * e `X-RateLimit-Reset`. Os campos ausentes ficam `null`. Não exige chave de acesso total
- * (diferente de `Client::usage()`) e não faz requisição extra.
+ * Every response carries `X-RateLimit-Limit` and `X-RateLimit-Remaining`; a `429` also carries `Retry-After`
+ * and `X-RateLimit-Reset`. Missing fields are `null`. It does not need a full-access key
+ * (unlike `Client::usage()`) and makes no extra request.
  */
 final class RateLimit
 {
     /**
-     * @param  int|null  $limit  Requisições permitidas por segundo (`X-RateLimit-Limit`).
-     * @param  int|null  $remaining  Quantas ainda cabem na janela atual (`X-RateLimit-Remaining`).
-     * @param  int|null  $retryAfter  Segundos para esperar antes de tentar de novo (`Retry-After`, só na 429).
-     * @param  int|null  $resetAt  Quando o limite volta, em timestamp Unix (`X-RateLimit-Reset`, só na 429).
+     * @param  int|null  $limit  Requests allowed per second (`X-RateLimit-Limit`).
+     * @param  int|null  $remaining  How many still fit in the current window (`X-RateLimit-Remaining`).
+     * @param  int|null  $retryAfter  Seconds to wait before trying again (`Retry-After`, only on a 429).
+     * @param  int|null  $resetAt  When the limit comes back, as a Unix timestamp (`X-RateLimit-Reset`, only on a 429).
      */
     public function __construct(
         public readonly ?int $limit = null,
@@ -27,7 +27,7 @@ final class RateLimit
     ) {}
 
     /**
-     * Lê os cabeçalhos (nomes em minúsculas). Devolve `null` quando nenhum deles veio.
+     * Reads the headers (lowercase names). Returns `null` when none of them came.
      *
      * @param  array<string, string>  $headers
      */

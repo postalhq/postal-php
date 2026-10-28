@@ -8,14 +8,14 @@ use Generator;
 use Postal\Exceptions\PostalException;
 
 /**
- * Onde a documentação diz "ID do contato", vale também o e-mail ou `external_id:<id>`.
+ * Where the documentation says "contact ID", the email or `external_id:<id>` works too.
  */
 class Contacts extends Resource
 {
     /**
-     * Cria um contato (`POST /contacts`). Falha se o e-mail ou o `external_id` já existirem.
+     * Creates a contact (`POST /contacts`). Fails if the email or the `external_id` already exist.
      *
-     * @param  array<string, mixed>  $params  `email` (obrigatório), `external_id`, `first_name`, `last_name`,
+     * @param  array<string, mixed>  $params  `email` (required), `external_id`, `first_name`, `last_name`,
      *                                        `unsubscribed`, `properties`, `segments`, `topics` e `tags`.
      * @return array<string, mixed>
      */
@@ -25,18 +25,18 @@ class Contacts extends Resource
     }
 
     /**
-     * Cria ou atualiza um contato, procurando por `id`, depois `external_id`, depois `email`
-     * (`POST /contacts/batch` com um item). Repetir a chamada é seguro.
+     * Creates or updates a contact, looking it up by `id`, then `external_id`, then `email`
+     * (`POST /contacts/batch` with one item). Repeating the call is safe.
      *
      * ```php
-     * $postal->contacts->upsert(['external_id' => 'user_42', 'email' => 'fulano@exemplo.com', 'first_name' => 'Fulano']);
+     * $postal->contacts->upsert(['external_id' => 'user_42', 'email' => 'jane@example.com', 'first_name' => 'Jane']);
      * ```
      *
      * @param  array<string, mixed>  $params
      * @return array{index: int, status: string, id: string, external_id: string|null, email: string, warnings?: list<string>}
-     *                                                                                                                         `status` é `created`, `updated` ou `unchanged`.
+     *                                                                                                                         `status` is `created`, `updated` or `unchanged`.
      *
-     * @throws PostalException `validation_error` se o item for recusado.
+     * @throws PostalException `validation_error` if the item is refused.
      */
     public function upsert(array $params): array
     {
@@ -44,19 +44,19 @@ class Contacts extends Resource
         $result = $response['results'][0] ?? null;
 
         if ($result === null) {
-            throw new PostalException(502, 'invalid_response', 'O Postal não devolveu o resultado do contato.');
+            throw new PostalException(502, 'invalid_response', 'Postal did not return the contact result.');
         }
 
         if (($result['status'] ?? null) === 'failed') {
-            throw new PostalException(422, 'validation_error', (string) ($result['error'] ?? 'Não foi possível salvar o contato.'));
+            throw new PostalException(422, 'validation_error', (string) ($result['error'] ?? 'The contact could not be saved.'));
         }
 
         return $result;
     }
 
     /**
-     * Cria ou atualiza vários contatos de uma vez (`POST /contacts/batch`). Até 1.000 itens a resposta traz
-     * um resultado por item (um item com erro não derruba os outros); acima disso o lote vai para a fila.
+     * Creates or updates several contacts at once (`POST /contacts/batch`). Up to 1,000 items, the response carries
+     * one result per item (an item with an error does not bring down the others); above that the batch goes to the queue.
      *
      * @param  list<array<string, mixed>>  $contacts
      * @return array<string, mixed>
@@ -67,7 +67,7 @@ class Contacts extends Resource
     }
 
     /**
-     * Um contato pelo ID, e-mail ou `external_id:<id>` (`GET /contacts/{id}`).
+     * One contact by ID, email or `external_id:<id>` (`GET /contacts/{id}`).
      *
      * @return array<string, mixed>
      */
@@ -77,7 +77,7 @@ class Contacts extends Resource
     }
 
     /**
-     * Um contato pelo `external_id` (a ID dele no seu sistema).
+     * One contact by `external_id` (its ID in your system).
      *
      * @return array<string, mixed>
      */
@@ -87,7 +87,7 @@ class Contacts extends Resource
     }
 
     /**
-     * Atualiza só os campos enviados (`PATCH /contacts/{id}`).
+     * Updates only the fields sent (`PATCH /contacts/{id}`).
      *
      * @param  array<string, mixed>  $params
      * @return array<string, mixed>
@@ -98,7 +98,7 @@ class Contacts extends Resource
     }
 
     /**
-     * Remove o contato da audiência (`DELETE /contacts/{id}`). Para só parar de enviar, use `unsubscribed => true`.
+     * Removes the contact from the audience (`DELETE /contacts/{id}`). To just stop sending, use `unsubscribed => true`.
      *
      * @return array<string, mixed>
      */
@@ -108,8 +108,8 @@ class Contacts extends Resource
     }
 
     /**
-     * Uma página de contatos, do mais recente para o mais antigo (`GET /contacts`).
-     * Filtros: `limit`, `after`, `before`, `search`, `segment_id`, `topic_id`, `unsubscribed`.
+     * A page of contacts, newest to oldest (`GET /contacts`).
+     * Filters: `limit`, `after`, `before`, `search`, `segment_id`, `topic_id`, `unsubscribed`.
      *
      * @param  array<string, mixed>  $params
      * @return array{object: string, has_more: bool, data: list<array<string, mixed>>}
@@ -121,7 +121,7 @@ class Contacts extends Resource
     }
 
     /**
-     * Percorre todos os contatos que batem com o filtro, página a página.
+     * Walks through all contacts matching the filter, page by page.
      *
      * @param  array<string, mixed>  $params
      * @return Generator<int, array<string, mixed>>
@@ -132,7 +132,7 @@ class Contacts extends Resource
     }
 
     /**
-     * Coloca o contato num segmento estático (`POST /contacts/{id}/segments/{segment_id}`).
+     * Puts the contact in a static segment (`POST /contacts/{id}/segments/{segment_id}`).
      *
      * @return array<string, mixed>
      */
@@ -142,7 +142,7 @@ class Contacts extends Resource
     }
 
     /**
-     * Tira o contato de um segmento estático (`DELETE /contacts/{id}/segments/{segment_id}`).
+     * Takes the contact out of a static segment (`DELETE /contacts/{id}/segments/{segment_id}`).
      *
      * @return array<string, mixed>
      */
@@ -152,9 +152,9 @@ class Contacts extends Resource
     }
 
     /**
-     * Registra a escolha do contato em tópicos (`PATCH /contacts/{id}/topics`).
+     * Records the contact's choice on topics (`PATCH /contacts/{id}/topics`).
      *
-     * @param  list<array{id: string, subscription: string}>  $topics  `subscription` é `opt_in` ou `opt_out`.
+     * @param  list<array{id: string, subscription: string}>  $topics  `subscription` is `opt_in` or `opt_out`.
      * @return array<string, mixed>
      */
     public function updateTopics(string $idOrEmail, array $topics): array

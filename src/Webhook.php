@@ -7,31 +7,31 @@ namespace Postal;
 use Postal\Exceptions\WebhookVerificationException;
 
 /**
- * Confere a assinatura das entregas de webhook do Postal (Standard Webhooks).
+ * Verifies the signature of Postal webhook deliveries (Standard Webhooks).
  */
 final class Webhook
 {
     /**
-     * Confere a assinatura de uma entrega e devolve o evento decodificado (`type`, `created_at`, `data`).
+     * Verifies the signature of a delivery and returns the decoded event (`type`, `created_at`, `data`).
      *
-     * A assinatura é `base64(HMAC-SHA256(chave, "{webhook-id}.{webhook-timestamp}.{corpo}"))`, enviada no
-     * cabeçalho `webhook-signature` como `v1,<base64>` (os mesmos valores vêm em `svix-id`, `svix-timestamp`
-     * e `svix-signature`). A chave é o `signing_secret` (`whsec_...`) sem o prefixo, decodificado de Base64.
+     * The signature is `base64(HMAC-SHA256(key, "{webhook-id}.{webhook-timestamp}.{body}"))`, sent in the
+     * `webhook-signature` header as `v1,<base64>` (the same values come in `svix-id`, `svix-timestamp`
+     * and `svix-signature`). The key is the `signing_secret` (`whsec_...`) without the prefix, Base64-decoded.
      *
-     * Passe o corpo **cru**, exatamente como chegou (`file_get_contents('php://input')` ou
-     * `$request->getContent()`): se ele passou por `json_decode` e `json_encode`, a assinatura não bate.
+     * Pass the **raw** body, exactly as it arrived (`file_get_contents('php://input')` or
+     * `$request->getContent()`): if it went through `json_decode` and `json_encode`, the signature will not match.
      *
      * ```php
      * $event = Postal\Webhook::verify(file_get_contents('php://input'), getallheaders(), getenv('POSTAL_WEBHOOK_SECRET'));
      * ```
      *
-     * @param  array<string, string|list<string>|null>  $headers  Cabeçalhos da requisição, em qualquer caixa (`getallheaders()`,
+     * @param  array<string, string|list<string>|null>  $headers  Request headers, in any letter case (`getallheaders()`,
      *                                                            `$request->headers->all()`).
-     * @param  int  $tolerance  Diferença máxima aceita entre o `webhook-timestamp` e agora, em segundos.
-     * @param  int|null  $now  Relógio, em segundos Unix. Só para testes.
+     * @param  int  $tolerance  Maximum difference accepted between the `webhook-timestamp` and now, in seconds.
+     * @param  int|null  $now  Clock, in Unix seconds. For tests only.
      * @return array<string, mixed>
      *
-     * @throws WebhookVerificationException Se algo não conferir.
+     * @throws WebhookVerificationException If anything does not check out.
      */
     public static function verify(string $payload, array $headers, string $secret, int $tolerance = 300, ?int $now = null): array
     {
@@ -50,25 +50,25 @@ final class Webhook
         $signatures = $lookup['webhook-signature'] ?? $lookup['svix-signature'] ?? '';
 
         if ($id === '' || $timestamp === '' || $signatures === '') {
-            throw new WebhookVerificationException('Faltam os cabeçalhos webhook-id, webhook-timestamp ou webhook-signature.');
+            throw new WebhookVerificationException('The webhook-id, webhook-timestamp or webhook-signature headers are missing.');
         }
 
         if (! ctype_digit($timestamp)) {
-            throw new WebhookVerificationException('O webhook-timestamp é inválido.');
+            throw new WebhookVerificationException('The webhook-timestamp is invalid.');
         }
 
         if (abs(($now ?? time()) - (int) $timestamp) > $tolerance) {
-            throw new WebhookVerificationException('O webhook-timestamp está fora da tolerância (mensagem antiga ou repetida).');
+            throw new WebhookVerificationException('The webhook-timestamp is outside the tolerance (old or repeated message).');
         }
 
         if ($secret === '') {
-            throw new WebhookVerificationException('Informe o signing_secret do webhook (whsec_...).');
+            throw new WebhookVerificationException('Provide the webhook signing_secret (whsec_...).');
         }
 
         $key = base64_decode(preg_replace('/^whsec_/', '', $secret) ?? '', true);
 
         if ($key === false) {
-            throw new WebhookVerificationException('O signing_secret não está em Base64 (esperado: whsec_...).');
+            throw new WebhookVerificationException('The signing_secret is not valid Base64 (expected: whsec_...).');
         }
 
         $expected = hash_hmac('sha256', "{$id}.{$timestamp}.{$payload}", $key, true);
@@ -89,13 +89,13 @@ final class Webhook
         }
 
         if (! $valid) {
-            throw new WebhookVerificationException('A assinatura do webhook não confere.');
+            throw new WebhookVerificationException('The webhook signature does not match.');
         }
 
         $event = json_decode($payload, true);
 
         if (! is_array($event)) {
-            throw new WebhookVerificationException('O corpo do webhook não é um JSON válido.');
+            throw new WebhookVerificationException('The webhook body is not valid JSON.');
         }
 
         return $event;

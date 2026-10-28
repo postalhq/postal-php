@@ -28,7 +28,7 @@ class Domains extends Resource
     }
 
     /**
-     * O domínio com os registros DNS e o status de cada um.
+     * The domain with its DNS records and the status of each.
      *
      * @return array<string, mixed>
      */
@@ -38,10 +38,10 @@ class Domains extends Resource
     }
 
     /**
-     * Cadastra o domínio e devolve os registros DNS a criar. Depois, chame {@see verify()}.
+     * Registers the domain and returns the DNS records to create. Then call {@see verify()}.
      *
-     * @param  array<string, mixed>  $params  `name` (obrigatório), `region`, `custom_return_path`, `open_tracking`,
-     *                                        `click_tracking`, `tracking_subdomain`, `tls` e `capabilities`.
+     * @param  array<string, mixed>  $params  `name` (required), `region`, `custom_return_path`, `open_tracking`,
+     *                                        `click_tracking`, `tracking_subdomain`, `tls` and `capabilities`.
      * @return array<string, mixed>
      */
     public function create(array $params): array
@@ -50,7 +50,7 @@ class Domains extends Resource
     }
 
     /**
-     * Pede ao Postal que confira o DNS agora (`POST /domains/{id}/verify`). Acompanhe o status com {@see get()}.
+     * Asks Postal to check the DNS now (`POST /domains/{id}/verify`). Follow the status with {@see get()}.
      *
      * @return array<string, mixed>
      */

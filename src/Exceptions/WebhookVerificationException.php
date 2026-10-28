@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Postal\Exceptions;
 
 /**
- * A assinatura de um webhook não confere. O nome é `webhook_verification_failed`.
+ * A webhook signature does not match. The name is `webhook_verification_failed`.
  */
 class WebhookVerificationException extends PostalException
 {

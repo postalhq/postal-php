@@ -4,11 +4,11 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Chave de API do Postal
+    | Postal API key
     |--------------------------------------------------------------------------
     |
-    | Crie em "Chaves de API", no painel (começa com "ps_"). Para um sistema que só envia e-mails
-    | e eventos, use uma chave só de envio. Nunca coloque a chave no código.
+    | Create one under "API keys" in the dashboard (it starts with "ps_"). For a system that only sends emails
+    | and events, use a sending-only key. Never put the key in code.
     |
     */
 
@@ -16,29 +16,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Opções do cliente
+    | Client options
     |--------------------------------------------------------------------------
     */
 
     'base_url' => env('POSTAL_API_URL', 'https://api.postal.so'),
 
     /*
-    | Tentativas extras em 429 e 5xx (e em falhas de rede, quando repetir é seguro). Padrão: 2; 0 desliga.
+    | Extra attempts on 429 and 5xx (and on network failures, when repeating is safe). Default: 2; 0 turns it off.
     */
 
     'max_retries' => (int) env('POSTAL_MAX_RETRIES', 2),
 
     /*
-    | Segundos que cada tentativa pode levar, do início ao fim. Padrão: 30. Mantenha alto se você
-    | envia anexos grandes (até 40 MB).
+    | Seconds each attempt may take, from start to finish. Default: 30. Keep it high if you
+    | send large attachments (up to 40 MB).
     */
 
     'timeout' => (float) env('POSTAL_TIMEOUT', 30),
 
     /*
-    | Segundos só para abrir a conexão (DNS, TCP e TLS). Padrão: 5; 0 desliga o limite próprio.
-    | Com a API fora do ar, uma chamada bloqueia no máximo cerca de (max_retries + 1) x connect_timeout
-    | mais as esperas entre tentativas. Em requisições web síncronas, considere timeout 10 e max_retries 1.
+    | Seconds just to open the connection (DNS, TCP and TLS). Default: 5; 0 turns off the dedicated limit.
+    | With the API down, a call blocks at most about (max_retries + 1) x connect_timeout
+    | plus the waits between attempts. In synchronous web requests, consider timeout 10 and max_retries 1.
     */
 
     'connect_timeout' => (float) env('POSTAL_CONNECT_TIMEOUT', 5),
@@ -48,7 +48,7 @@ return [
     | Webhooks
     |--------------------------------------------------------------------------
     |
-    | O signing_secret (whsec_...) do webhook, usado por Postal\Webhook::verify().
+    | The webhook signing_secret (whsec_...), used by Postal\Webhook::verify().
     |
     */
 

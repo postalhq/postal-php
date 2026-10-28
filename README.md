@@ -1,207 +1,209 @@
 # postal-so/postal-php
 
-SDK oficial do [Postal](https://postal.so) para PHP: envie e-mails, mantenha contatos, dispare eventos de produto e confira webhooks. Inclui uma ponte opcional para o Laravel, com um transporte de e-mail `postal` (`MAIL_MAILER=postal`).
+[Português (pt-BR)](README.pt-BR.md) · English
 
-- PHP 8.2 ou mais novo.
-- Sem dependências obrigatórias: usa `ext-curl` e `ext-json`.
-- Erros tipados, chave de idempotência e retentativa automática em 429 e 5xx.
+Official [Postal](https://postal.so) SDK for PHP: send emails, keep contacts, fire product events and verify webhooks. Includes an optional Laravel bridge, with a `postal` mail transport (`MAIL_MAILER=postal`).
 
-Documentação da API: <https://postal.so/docs>. Guia deste SDK: <https://postal.so/docs/sdks>.
+- PHP 8.2 or newer.
+- No required dependencies: it uses `ext-curl` and `ext-json`.
+- Typed errors, idempotency keys and automatic retries on 429 and 5xx.
 
-## Instalação
+API documentation: <https://postal.so/en/docs>. Guide to this SDK: <https://postal.so/en/docs/sdks>.
+
+## Installation
 
 ```bash
 composer require postal-so/postal-php
 ```
 
-## Primeiro envio
+## First send
 
-Crie uma chave de API em **Chaves de API**, no painel (ela começa com `ps_`), guarde-a numa variável de ambiente e verifique o domínio de onde você envia.
+Create an API key under **API keys** in the dashboard (it starts with `ps_`), store it in an environment variable and verify the domain you send from.
 
 ```php
 use Postal\Client;
 
-$postal = new Client(getenv('POSTAL_API_KEY')); // ou new Client() para ler POSTAL_API_KEY sozinho
+$postal = new Client(getenv('POSTAL_API_KEY')); // or new Client() to read POSTAL_API_KEY by itself
 
 $result = $postal->emails->send([
-    'from' => 'Minha empresa <voce@seudominio.com.br>',
-    'to' => 'fulano@exemplo.com',
-    'subject' => 'Bem-vindo!',
-    'html' => '<p>Que bom ter você por aqui.</p>',
-    'text' => 'Que bom ter você por aqui.',
+    'from' => 'Acme Store <you@yourdomain.com>',
+    'to' => 'jane@example.com',
+    'subject' => 'Welcome!',
+    'html' => '<p>We are glad to have you here.</p>',
+    'text' => 'We are glad to have you here.',
 ]);
 
 echo $result['id'];
 ```
 
-Não use a chave no navegador nem em apps: chame o Postal a partir do seu servidor. Para sistemas que só disparam e-mails e eventos, crie uma chave **só de envio**.
+Do not use the key in a browser or an app: call Postal from your server. For systems that only send emails and events, create a **sending-only** key.
 
-Os campos têm os mesmos nomes da API (`reply_to`, `scheduled_at`, `external_id`...) e as respostas são arrays, então a documentação em <https://postal.so/docs/api> vale direto para o SDK.
+Fields have the same names as the API (`reply_to`, `scheduled_at`, `external_id`...) and responses are arrays, so the documentation at <https://postal.so/en/docs/api> applies directly to the SDK.
 
-### Opções do cliente
+### Client options
 
 ```php
 $postal = new Client('ps_xxx', [
-    'base_url' => 'https://api.postal.so', // padrão
-    'max_retries' => 2,                    // tentativas extras em 429 e 5xx; 0 desliga
-    'timeout' => 30,                       // segundos por tentativa, do início ao fim
-    'connect_timeout' => 5,                // segundos só para abrir a conexão; 0 desliga
-    'retry_delay' => 500,                  // espera base em ms, dobra a cada tentativa
+    'base_url' => 'https://api.postal.so', // default
+    'max_retries' => 2,                    // extra attempts on 429 and 5xx; 0 turns it off
+    'timeout' => 30,                       // seconds per attempt, from start to finish
+    'connect_timeout' => 5,                // seconds just to open the connection; 0 turns it off
+    'retry_delay' => 500,                  // base wait in ms, doubles on every attempt
 ]);
 ```
 
-### Tempos limite e retentativas
+### Timeouts and retries
 
-| Opção | Padrão | O que limita |
+| Option | Default | What it limits |
 | --- | --- | --- |
-| `timeout` | 30 s | Cada tentativa inteira: conexão, envio do corpo e leitura da resposta. Mantenha alto se você envia anexos grandes (até 40 MB). |
-| `connect_timeout` | 5 s | Só a abertura da conexão (DNS, TCP e TLS), via `CURLOPT_CONNECTTIMEOUT_MS`. Se estourar, vira `NetworkException` com o nome `connect_timeout`. `0` desliga. |
-| `max_retries` | 2 | Tentativas extras (3 no total). `0` desliga. |
+| `timeout` | 30 s | The whole attempt: connection, sending the body and reading the response. Keep it high if you send large attachments (up to 40 MB). |
+| `connect_timeout` | 5 s | Only opening the connection (DNS, TCP and TLS), through `CURLOPT_CONNECTTIMEOUT_MS`. If it runs out, it becomes a `NetworkException` with the name `connect_timeout`. `0` turns it off. |
+| `max_retries` | 2 | Extra attempts (3 in total). `0` turns it off. |
 
-O pior caso de bloqueio de uma chamada é:
+The worst case for a call to block is:
 
 ```
-(max_retries + 1) × tempo de cada tentativa + esperas entre tentativas
+(max_retries + 1) × time of each attempt + waits between attempts
 ```
 
-A espera começa em 500 ms e dobra a cada tentativa, com até 25% a mais (com os padrões, no máximo cerca de 1,9 s no total). Num 429, a espera é o `Retry-After` (até 30 s por tentativa). Com os padrões:
+The wait starts at 500 ms and doubles on every attempt, with up to 25% extra (with the defaults, about 1.9 s in total at most). On a 429, the wait is the `Retry-After` (up to 30 s per attempt). With the defaults:
 
-- **API inalcançável** (a conexão não abre): `3 × 5 s + ~1,9 s`, cerca de **17 s**.
-- **API aceita a conexão mas não responde**: `3 × 30 s + ~1,9 s`, cerca de **92 s**.
+- **API unreachable** (the connection does not open): `3 × 5 s + ~1.9 s`, about **17 s**.
+- **API accepts the connection but does not answer**: `3 × 30 s + ~1.9 s`, about **92 s**.
 
-Recomendações:
+Recommendations:
 
-- **Requisição web síncrona** (alguém esperando a página): `timeout` 10 e `max_retries` 1. Com a API inalcançável isso bloqueia cerca de 11 s (`2 × 5 s + ~0,6 s`; use `connect_timeout` 3 para ~7 s) e no máximo cerca de 21 s se ela travar depois de conectar. Se a requisição envia anexos grandes, mantenha o `timeout` mais alto ou envie por uma fila.
-- **Job em fila** (ninguém esperando): fique com os padrões. Ou melhor, deixe a própria fila repetir o job.
+- **Synchronous web request** (someone waiting for the page): `timeout` 10 and `max_retries` 1. With the API unreachable this blocks about 11 s (`2 × 5 s + ~0.6 s`; use `connect_timeout` 3 for ~7 s) and at most about 21 s if it hangs after connecting. If the request sends large attachments, keep `timeout` higher or send through a queue.
+- **Queued job** (nobody waiting): keep the defaults. Or better, let the queue itself retry the job.
 
 ```php
 $postal = new Client(getenv('POSTAL_API_KEY'), ['timeout' => 10, 'max_retries' => 1]);
 ```
 
-No Laravel, as mesmas opções ficam em `config/postal.php` e nas variáveis `POSTAL_TIMEOUT`, `POSTAL_CONNECT_TIMEOUT` e `POSTAL_MAX_RETRIES`.
+In Laravel, the same options live in `config/postal.php` and in the `POSTAL_TIMEOUT`, `POSTAL_CONNECT_TIMEOUT` and `POSTAL_MAX_RETRIES` variables.
 
-## E-mails
+## Emails
 
 ```php
-// Com template publicado: from, subject e reply_to vêm do template
+// With a published template: from, subject and reply_to come from the template
 $postal->emails->send([
-    'to' => 'fulano@exemplo.com',
-    'template' => ['id' => 'boas-vindas', 'variables' => ['NOME' => 'Fulano']],
+    'to' => 'jane@example.com',
+    'template' => ['id' => 'welcome', 'variables' => ['NAME' => 'Jane']],
 ]);
 
-// Agendado (até 30 dias), com anexo e etiqueta
+// Scheduled (up to 30 days), with an attachment and a tag
 $result = $postal->emails->send([
-    'from' => 'voce@seudominio.com.br',
-    'to' => ['fulano@exemplo.com'],
-    'subject' => 'Sua nota fiscal',
-    'html' => '<p>Segue em anexo.</p>',
-    'attachments' => [['filename' => 'nota.pdf', 'content' => base64_encode($pdf)]],
-    'tags' => [['name' => 'categoria', 'value' => 'fiscal']],
+    'from' => 'you@yourdomain.com',
+    'to' => ['jane@example.com'],
+    'subject' => 'Your invoice',
+    'html' => '<p>Attached.</p>',
+    'attachments' => [['filename' => 'invoice.pdf', 'content' => base64_encode($pdf)]],
+    'tags' => [['name' => 'category', 'value' => 'billing']],
     'scheduled_at' => new DateTimeImmutable('+1 hour'),
 ]);
 
-$postal->emails->update($result['id'], '2026-10-26T09:00:00-03:00'); // reagenda
-$postal->emails->cancel($result['id']);                               // cancela
+$postal->emails->update($result['id'], '2026-10-26T09:00:00-03:00'); // reschedules
+$postal->emails->cancel($result['id']);                               // cancels
 
-// Até 100 e-mails numa requisição: ou todos entram na fila, ou nenhum
+// Up to 100 emails in one request: either all are queued, or none
 $postal->emails->batch([
-    ['from' => 'voce@seudominio.com.br', 'to' => 'ana@exemplo.com', 'subject' => 'Seu cupom', 'html' => '<p>BEMVINDA</p>'],
-    ['from' => 'voce@seudominio.com.br', 'to' => 'bia@exemplo.com', 'subject' => 'Seu cupom', 'html' => '<p>BEMVINDA</p>'],
+    ['from' => 'you@yourdomain.com', 'to' => 'ann@example.com', 'subject' => 'Your coupon', 'html' => '<p>WELCOME</p>'],
+    ['from' => 'you@yourdomain.com', 'to' => 'bea@example.com', 'subject' => 'Your coupon', 'html' => '<p>WELCOME</p>'],
 ]);
 
-$email = $postal->emails->get($result['id']); // status em last_event e histórico em events
+$email = $postal->emails->get($result['id']); // status in last_event and history in events
 $page = $postal->emails->list(['status' => ['bounced', 'complained'], 'limit' => 50]);
 ```
 
-`emails->list` e os demais métodos de leitura exigem uma chave de acesso total. Duas leituras também funcionam com uma chave só de envio: `emails->get` (só os e-mails que ela enviou) e `usage()` (sem os créditos de verificação).
+`emails->list` and the other read methods need a full-access key. Two reads also work with a sending-only key: `emails->get` (only the emails it sent) and `usage()` (without the verification credits).
 
-### Códigos de uso único (`OTP-Token`)
+### One-time codes (`OTP-Token`)
 
-O cabeçalho `OTP-Token` ([draft-goto-otp-token](https://datatracker.ietf.org/doc/draft-goto-otp-token/)) entrega o código de um e-mail de verificação de forma legível por máquina e presa a uma origem, para que o cliente de e-mail o ofereça à página que o pediu. O SDK envia `headers` como estão (sem codificar as aspas, em `send`, `batch`, agendados e com template, e também pelo transporte do Laravel); `OtpToken::header($código, $origem)` monta o valor com o escape certo:
+The `OTP-Token` header ([draft-goto-otp-token](https://datatracker.ietf.org/doc/draft-goto-otp-token/)) delivers the code of a verification email in a machine-readable way, bound to an origin, so that the mail client offers it to the page that asked for it. The SDK sends `headers` as they are (without encoding the quotes, in `send`, `batch`, scheduled sends and with a template, and also through the Laravel transport); `OtpToken::header($code, $origin)` builds the value with the right escaping:
 
 ```php
 use Postal\OtpToken;
 
 $postal->emails->send([
-    'from' => 'voce@seudominio.com.br',
-    'to' => 'fulano@exemplo.com',
-    'subject' => 'Seu código de verificação',
-    'html' => '<p>Seu código: <b>123456</b></p>',
-    'headers' => ['OTP-Token' => OtpToken::header('123456', 'https://exemplo.com')], // "123456"; origin="https://exemplo.com"
+    'from' => 'you@yourdomain.com',
+    'to' => 'jane@example.com',
+    'subject' => 'Your verification code',
+    'html' => '<p>Your code: <b>123456</b></p>',
+    'headers' => ['OTP-Token' => OtpToken::header('123456', 'https://example.com')], // "123456"; origin="https://example.com"
 ]);
 ```
 
-O código precisa ser ASCII imprimível; a origem, a canônica de quem pede o código (`https://host[:porta]` em minúsculas, sem caminho, sem barra no fim e sem porta padrão; `http` só em `localhost`). Se não servir, `OtpToken::header` lança `PostalException` (`getErrorName()` = `validation_error`, `getStatusCode()` = 0) antes de a API recusar o envio com 422. Passe o cabeçalho uma vez só.
+The code must be printable ASCII; the origin, the canonical one of whoever asks for the code (`https://host[:port]` in lowercase, no path, no trailing slash and no default port; `http` only on `localhost`). If it will not do, `OtpToken::header` throws `PostalException` (`getErrorName()` = `validation_error`, `getStatusCode()` = 0) before the API refuses the send with 422. Pass the header only once.
 
-### Idempotência
+### Idempotency
 
-Para repetir um envio sem mandar o e-mail duas vezes, passe uma chave que identifique o *motivo* do envio (não a tentativa):
+To repeat a send without emailing twice, pass a key that identifies the *reason* for the send (not the attempt):
 
 ```php
-$postal->emails->send($params, 'pedido-10482-enviado');
+$postal->emails->send($params, 'order-10482-shipped');
 ```
 
-Sem chave, o SDK gera uma (um UUID) para cada chamada de `emails->send`, `emails->batch` e `events->send` e a reaproveita nas retentativas, então um timeout, uma falha de conexão ou um 5xx não duplica o envio. Já os outros `POST` e `PATCH` (como `contacts->create`, `segments->create` e `emails->cancel`) não levam chave: o SDK só os repete em 429 (a API recusou antes de processar), nunca após um 5xx ou uma falha de rede, porque repetir poderia duplicar o efeito. `contacts->upsert` e `contacts->batch` são seguros de repetir e por isso são repetidos. Veja [Idempotência](https://postal.so/docs/idempotencia).
+Without a key, the SDK generates one (a UUID) for each call of `emails->send`, `emails->batch` and `events->send` and reuses it on retries, so a timeout, a connection failure or a 5xx does not duplicate the send. The other `POST` and `PATCH` calls (such as `contacts->create`, `segments->create` and `emails->cancel`) carry no key: the SDK only repeats them on 429 (the API refused before processing), never after a 5xx or a network failure, because repeating could duplicate the effect. `contacts->upsert` and `contacts->batch` are safe to repeat and are therefore repeated. See [Idempotency](https://postal.so/en/docs/idempotencia).
 
-## Contatos
+## Contacts
 
-O `external_id` é o ID da pessoa no seu sistema. `upsert` cria ou atualiza o contato procurando por `id`, depois `external_id`, depois `email`, e repetir a chamada é seguro.
+`external_id` is the person's ID in your system. `upsert` creates or updates the contact looking it up by `id`, then `external_id`, then `email`, and repeating the call is safe.
 
 ```php
 $result = $postal->contacts->upsert([
     'external_id' => 'user_42',
-    'email' => 'fulano@exemplo.com', // obrigatório para criar um contato novo
-    'first_name' => 'Fulano',
-    'properties' => ['plan' => 'pro'], // a propriedade precisa existir antes
+    'email' => 'jane@example.com', // required to create a new contact
+    'first_name' => 'Jane',
+    'properties' => ['plan' => 'pro'], // the property must exist beforehand
 ]);
-echo $result['status']; // created, updated ou unchanged
+echo $result['status']; // created, updated or unchanged
 
 $contact = $postal->contacts->getByExternalId('user_42');
-$postal->contacts->update('fulano@exemplo.com', ['unsubscribed' => true]);
+$postal->contacts->update('jane@example.com', ['unsubscribed' => true]);
 $postal->contacts->delete($contact['id']);
 
-foreach ($postal->contacts->iterate(['search' => 'ana']) as $contact) {
-    echo $contact['email']; // percorre todas as páginas
+foreach ($postal->contacts->iterate(['search' => 'ann']) as $contact) {
+    echo $contact['email']; // walks through all the pages
 }
 ```
 
-Quem se descadastrou só volta a receber se você informar `resubscribe => ['consented_at' => ..., 'proof' => ...]` com a prova do novo consentimento. `contacts->batch([...])` faz o mesmo para muitos contatos de uma vez.
+Someone who unsubscribed only receives again if you send `resubscribe => ['consented_at' => ..., 'proof' => ...]` with proof of the new consent. `contacts->batch([...])` does the same for many contacts at once.
 
-## Eventos
+## Events
 
-Eventos contam ao Postal o que acontece no seu produto e iniciam as automações com aquele gatilho. Funcionam com chave só de envio.
+Events tell Postal what happens in your product and start the automations with that trigger. They work with a sending-only key.
 
 ```php
 $postal->events->send([
     'name' => 'signup',
-    'contact' => 'fulano@exemplo.com', // um e-mail novo cria o contato
+    'contact' => 'jane@example.com', // a new email creates the contact
     'properties' => ['plan' => 'free', 'source' => 'site'],
 ]);
 
 $postal->events->send([
     'name' => 'order.paid',
     'contact' => 'external_id:user_42',
-    'properties' => ['total' => 199.9, 'currency' => 'BRL'],
-    'contact_properties' => ['plan' => 'pro'], // atualiza o contato antes das automações
+    'properties' => ['total' => 199.9, 'currency' => 'USD'],
+    'contact_properties' => ['plan' => 'pro'], // updates the contact before the automations
 ], 'order-10482-paid');
 ```
 
-## Segmentos, tópicos e domínios
+## Segments, topics and domains
 
 ```php
-$segment = $postal->segments->create(['name' => 'Clientes ativos']);
-$postal->contacts->addToSegment('fulano@exemplo.com', $segment['id']);
+$segment = $postal->segments->create(['name' => 'Active customers']);
+$postal->contacts->addToSegment('jane@example.com', $segment['id']);
 
-$postal->topics->create(['name' => 'Novidades', 'default_subscription' => 'opt_in', 'visibility' => 'public']);
+$postal->topics->create(['name' => 'News', 'default_subscription' => 'opt_in', 'visibility' => 'public']);
 
 $domains = $postal->domains->list();
-$postal->domains->verify($domains['data'][0]['id']);     // confere o DNS agora
-$domain = $postal->domains->get($domains['data'][0]['id']); // registros e status de cada um
+$postal->domains->verify($domains['data'][0]['id']);     // checks DNS now
+$domain = $postal->domains->get($domains['data'][0]['id']); // records and the status of each
 ```
 
 ## Webhooks
 
-Cadastre o endpoint no painel ou com `$postal->webhooks->create(['endpoint' => ..., 'events' => [...]])` e guarde o `signing_secret` (`whsec_...`). `Webhook::verify($payload, $headers, $secret)` confere a assinatura (Standard Webhooks: HMAC-SHA256 de `{webhook-id}.{webhook-timestamp}.{corpo}`), recusa mensagens com mais de 5 minutos de diferença e devolve o evento. Use o corpo **cru**, exatamente como chegou.
+Register the endpoint in the dashboard or with `$postal->webhooks->create(['endpoint' => ..., 'events' => [...]])` and keep the `signing_secret` (`whsec_...`). `Webhook::verify($payload, $headers, $secret)` checks the signature (Standard Webhooks: HMAC-SHA256 of `{webhook-id}.{webhook-timestamp}.{body}`), refuses messages more than 5 minutes off and returns the event. Use the **raw** body, exactly as it arrived.
 
 ```php
 use Postal\Exceptions\WebhookVerificationException;
@@ -219,13 +221,13 @@ try {
 }
 
 if ($event['type'] === 'email.bounced') {
-    // descarte o endereço em $event['data']['to']
+    // drop the address in $event['data']['to']
 }
 
 http_response_code(200);
 ```
 
-No Laravel, em uma rota fora do grupo `web` (sem CSRF):
+In Laravel, in a route outside the `web` group (no CSRF):
 
 ```php
 Route::post('/webhooks/postal', function (Request $request) {
@@ -237,11 +239,11 @@ Route::post('/webhooks/postal', function (Request $request) {
 });
 ```
 
-Use o cabeçalho `webhook-id` para descartar entregas repetidas. Veja [Webhooks](https://postal.so/docs/webhooks).
+Use the `webhook-id` header to discard repeated deliveries. See [Webhooks](https://postal.so/en/docs/webhooks).
 
-## Erros
+## Errors
 
-Toda resposta de erro do Postal vira uma `Postal\Exceptions\PostalException` com o status, o `name` (código estável em inglês, como `validation_error`) e a mensagem do Postal. Trate pelo `name`, não pela mensagem.
+Every error response from Postal becomes a `Postal\Exceptions\PostalException` with the status, the `name` (a stable code in English, such as `validation_error`) and Postal's message. Handle it by `name`, not by message.
 
 ```php
 use Postal\Exceptions\PostalException;
@@ -254,88 +256,88 @@ try {
     $e->getMessage();    // 'Missing `subject` field.'
 
     if ($e->getErrorName() === 'daily_quota_exceeded') {
-        // a cota diária acabou; volta às 00:00 UTC
+        // the daily quota ran out; it comes back at 00:00 UTC
     }
 }
 ```
 
-Falhas de rede e tempo esgotado viram `NetworkException` (status 0; nome `network_error`, `timeout` ou `connect_timeout`), que também é uma `PostalException`. Os códigos estão em <https://postal.so/docs/erros>.
+Network failures and timeouts become `NetworkException` (status 0; name `network_error`, `timeout` or `connect_timeout`), which is also a `PostalException`. The codes are at <https://postal.so/en/docs/erros>.
 
-### Retentativas
+### Retries
 
-- `429 rate_limit_exceeded` é repetido sempre, esperando o `Retry-After`. Cota esgotada (`daily_quota_exceeded`, `monthly_quota_exceeded`) não é repetida.
-- `5xx`, `409 concurrent_idempotent_requests` e falhas de rede são repetidos em `GET`, `DELETE`, nos envios com chave de idempotência (a automática inclusa) e em `contacts->upsert`. Num `POST` sem chave, como `contacts->create`, não: repetir poderia duplicar o efeito.
-- A espera começa em 500 ms e dobra a cada tentativa (máximo de 30 s).
-- Uma falha ou tempo esgotado de conexão (`connect_timeout`) conta como falha de rede e segue a mesma regra.
+- `429 rate_limit_exceeded` is always repeated, waiting for the `Retry-After`. An exhausted quota (`daily_quota_exceeded`, `monthly_quota_exceeded`) is not repeated.
+- `5xx`, `409 concurrent_idempotent_requests` and network failures are repeated on `GET`, `DELETE`, on sends with an idempotency key (the automatic one included) and on `contacts->upsert`. On a `POST` without a key, such as `contacts->create`, they are not: repeating could duplicate the effect.
+- The wait starts at 500 ms and doubles on every attempt (30 s at most).
+- A connection failure or timeout (`connect_timeout`) counts as a network failure and follows the same rule.
 
-### Limite de requisições
+### Rate limit
 
-`$postal->rateLimit()` devolve o limite de requisições por segundo lido dos cabeçalhos da última resposta (`X-RateLimit-Limit`, `X-RateLimit-Remaining` e, na 429, `Retry-After` e `X-RateLimit-Reset`). Diferente de `$postal->usage()`, funciona com chave **só de envio** e não faz requisição extra.
+`$postal->rateLimit()` returns the requests-per-second limit read from the headers of the last response (`X-RateLimit-Limit`, `X-RateLimit-Remaining` and, on a 429, `Retry-After` and `X-RateLimit-Reset`). Unlike `$postal->usage()`, it works with a **sending-only** key and makes no extra request.
 
 ```php
 $postal->emails->send($params);
 
-$rateLimit = $postal->rateLimit(); // null até chegar uma resposta com os cabeçalhos
+$rateLimit = $postal->rateLimit(); // null until a response with the headers arrives
 // Postal\RateLimit { limit: 10, remaining: 9, retryAfter: null, resetAt: null }
 
 if ($rateLimit !== null && $rateLimit->remaining === 0) {
-    // desacelere o envio em lote
+    // slow down the bulk send
 }
 ```
 
-As propriedades (`readonly`) são `limit` e `remaining` (requisições por segundo), e `retryAfter` (segundos) e `resetAt` (timestamp Unix) que só vêm na 429. O que não veio é `null`. Respostas de erro também contam: a `PostalException` de uma 429 traz o mesmo objeto em `$e->rateLimit`. Uma resposta sem os cabeçalhos mantém o último valor conhecido.
+The (`readonly`) properties are `limit` and `remaining` (requests per second), and `retryAfter` (seconds) and `resetAt` (Unix timestamp), which only come on a 429. Whatever did not come is `null`. Error responses count too: the `PostalException` of a 429 carries the same object in `$e->rateLimit`. A response without the headers keeps the last known value.
 
 ## Laravel
 
-O pacote se registra sozinho (auto-discovery). Ele cria o `Postal\Client` no container, lendo `POSTAL_API_KEY`, e o transporte de e-mail `postal`.
+The package registers itself (auto-discovery). It creates the `Postal\Client` in the container, reading `POSTAL_API_KEY`, and the `postal` mail transport.
 
 ```php
 use Postal\Client;
 
-Route::post('/convites', function (Client $postal) {
+Route::post('/invitations', function (Client $postal) {
     $postal->events->send(['name' => 'invite.sent', 'contact' => request('email')]);
 });
 ```
 
-### Mandar os e-mails do Laravel pelo Postal
+### Send Laravel's emails through Postal
 
-1. Defina a chave no `.env`:
+1. Set the key in `.env`:
 
    ```dotenv
    MAIL_MAILER=postal
-   MAIL_FROM_ADDRESS=voce@seudominio.com.br
-   MAIL_FROM_NAME="Minha empresa"
+   MAIL_FROM_ADDRESS=you@yourdomain.com
+   MAIL_FROM_NAME="Acme Store"
    POSTAL_API_KEY=ps_xxx
    ```
 
-2. Em `config/mail.php`, dentro de `mailers`, acrescente:
+2. In `config/mail.php`, inside `mailers`, add:
 
    ```php
    'postal' => [
        'transport' => 'postal',
-       // 'key' => env('POSTAL_API_KEY'), // opcional: uma chave só deste mailer
+       // 'key' => env('POSTAL_API_KEY'), // optional: a key just for this mailer
    ],
    ```
 
-Pronto: `Mail::to(...)->send(...)`, notificações por e-mail e `Mailable`s passam a sair pela API do Postal. O domínio de `MAIL_FROM_ADDRESS` precisa estar verificado. Vão junto os anexos, as imagens embutidas, `Cc`, `Bcc`, `Reply-To`, os cabeçalhos extras e as etiquetas (`tag()` e `metadata()` do `Mailable` viram etiquetas do envio). O ID do e-mail no Postal fica em `$sentMessage->getMessageId()`.
+That is it: `Mail::to(...)->send(...)`, email notifications and `Mailable`s now go out through the Postal API. The domain of `MAIL_FROM_ADDRESS` must be verified. Attachments, inline images, `Cc`, `Bcc`, `Reply-To`, extra headers and tags go along (the `Mailable`'s `tag()` and `metadata()` become tags of the send). The email ID in Postal is in `$sentMessage->getMessageId()`.
 
-O transporte usa `symfony/mailer`, que já vem com o Laravel. Ele é só uma sugestão (`suggest`) do pacote, para que quem não usa Laravel não precise instalá-lo.
+The transport uses `symfony/mailer`, which already comes with Laravel. It is only a suggestion (`suggest`) of the package, so that those who do not use Laravel do not have to install it.
 
-Para publicar o arquivo de configuração (opcional):
+To publish the configuration file (optional):
 
 ```bash
 php artisan vendor:publish --tag=postal-config
 ```
 
-## Testes
+## Tests
 
 ```bash
 composer install
 vendor/bin/phpunit
 ```
 
-Os testes usam um transporte HTTP falso e, para o `CurlTransport`, um servidor local (`php -S`). Para trocar o transporte HTTP no seu código, passe uma classe que implemente `Postal\Http\Transport` na opção `transport` (o método `send` recebe o `timeout` e o `connect_timeout`, nessa ordem, depois do corpo).
+The tests use a fake HTTP transport and, for `CurlTransport`, a local server (`php -S`). To swap the HTTP transport in your code, pass a class that implements `Postal\Http\Transport` in the `transport` option (the `send` method receives the `timeout` and the `connect_timeout`, in that order, after the body).
 
-## Licença
+## License
 
 MIT

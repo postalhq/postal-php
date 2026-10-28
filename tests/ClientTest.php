@@ -25,7 +25,7 @@ final class ClientTest extends TestCase
 
         try {
             new Client;
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame('missing_api_key', $exception->getErrorName());
         }
@@ -99,7 +99,7 @@ final class ClientTest extends TestCase
 
         try {
             $this->client($transport)->emails->send(['from' => 'a@b.com', 'to' => 'c@d.com', 'text' => 't']);
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame('validation_error', $exception->getErrorName());
             $this->assertSame('validation_error', $exception->errorName);
@@ -107,7 +107,7 @@ final class ClientTest extends TestCase
             $this->assertSame(422, $exception->getStatusCode());
         }
 
-        $this->assertCount(1, $transport->requests, '422 não é repetido');
+        $this->assertCount(1, $transport->requests, 'a 422 is not retried');
     }
 
     public function test_retries_429_and_stops_after_the_limit(): void
@@ -116,7 +116,7 @@ final class ClientTest extends TestCase
 
         try {
             $this->client($transport, ['max_retries' => 2])->contacts->get('fulano@exemplo.com');
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame('rate_limit_exceeded', $exception->getErrorName());
             $this->assertSame(0, $exception->retryAfter);
@@ -155,7 +155,7 @@ final class ClientTest extends TestCase
 
         try {
             $this->client($transport)->contacts->create(['email' => 'fulano@exemplo.com']);
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame(500, $exception->getStatusCode());
         }
@@ -173,13 +173,13 @@ final class ClientTest extends TestCase
             {
                 $this->calls++;
 
-                throw new NetworkException('network_error', 'sem conexão');
+                throw new NetworkException('network_error', 'no connection');
             }
         };
 
         try {
             (new Client('ps_x', ['transport' => $transport, 'retry_delay' => 0]))->domains->list();
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (NetworkException $exception) {
             $this->assertSame('network_error', $exception->getErrorName());
             $this->assertSame(0, $exception->getStatusCode());
@@ -222,7 +222,7 @@ final class ClientTest extends TestCase
 
         try {
             (new Client('ps_x', ['transport' => $transport, 'retry_delay' => 0]))->domains->list();
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (NetworkException $exception) {
             $this->assertSame('connect_timeout', $exception->getErrorName());
             $this->assertStringContainsString('connect_timeout', $exception->getMessage());
@@ -286,7 +286,7 @@ final class ClientTest extends TestCase
 
         try {
             $postal->domains->list();
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertEquals(new RateLimit(limit: 2, remaining: 0, retryAfter: 3, resetAt: 1790000000), $exception->rateLimit);
             $this->assertSame(3, $exception->retryAfter);
@@ -317,7 +317,7 @@ final class ClientTest extends TestCase
 
         try {
             $this->client($transport, ['max_retries' => 0])->domains->list();
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame(502, $exception->getStatusCode());
             $this->assertSame('internal_server_error', $exception->getErrorName());
@@ -347,7 +347,7 @@ final class ClientTest extends TestCase
 
         try {
             $this->client($transport)->contacts->upsert(['external_id' => 'nobody']);
-            $this->fail('Esperava uma exceção.');
+            $this->fail('Expected an exception.');
         } catch (PostalException $exception) {
             $this->assertSame('validation_error', $exception->getErrorName());
             $this->assertStringContainsString('Send its `email`', $exception->getMessage());
@@ -448,6 +448,6 @@ final class ClientTest extends TestCase
             'GET /emails/e1', 'PATCH /emails/e1', 'POST /emails/e1/cancel', 'POST /emails/batch', 'GET /emails/e1/raw',
             'POST /segments', 'POST /topics', 'POST /webhooks', 'POST /webhooks/w1/signing-secret/rotate', 'GET /usage',
         ], $transport->lines());
-        $this->assertTrue(array_is_list($transport->requests[6]['json']), 'o lote é uma lista');
+        $this->assertTrue(array_is_list($transport->requests[6]['json']), 'the batch is a list');
     }
 }

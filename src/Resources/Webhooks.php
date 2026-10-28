@@ -7,7 +7,7 @@ namespace Postal\Resources;
 use Postal\Webhook;
 
 /**
- * Cadastro dos endpoints de webhook. Para conferir a assinatura de uma entrega, use {@see Webhook::verify()}.
+ * Registration of webhook endpoints. To verify the signature of a delivery, use {@see Webhook::verify()}.
  */
 class Webhooks extends Resource
 {
@@ -22,7 +22,7 @@ class Webhooks extends Resource
     }
 
     /**
-     * Devolve o `signing_secret` (`whsec_...`) usado por {@see Webhook::verify()}.
+     * Returns the `signing_secret` (`whsec_...`) used by {@see Webhook::verify()}.
      *
      * @param  array{endpoint: string, events: list<string>}  $params
      * @return array<string, mixed>
@@ -58,7 +58,7 @@ class Webhooks extends Resource
     }
 
     /**
-     * Gera um segredo novo, que vale na hora. Atualize o seu servidor em seguida.
+     * Generates a new secret, valid right away. Update your server afterwards.
      *
      * @return array<string, mixed>
      */
